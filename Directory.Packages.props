@@ -7,9 +7,9 @@
     <PackageVersion Include="PanoramicData.NCalcExtensions" Version="5.8.33" />
     
     <!-- Testing -->
-    <PackageVersion Include="xunit" Version="3.0.0" />
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.5.1" />
-    <PackageVersion Include="AwesomeAssertions" Version="9.4.0" />
+    <PackageVersion Include="AwesomeAssertions" Version="9.1.0" />
   </ItemGroup>
 </Project>

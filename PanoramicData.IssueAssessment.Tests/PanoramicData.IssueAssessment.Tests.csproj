@@ -1,21 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>PanoramicData.IssueAssessment.Tests</RootNamespace>
     <AssemblyName>PanoramicData.IssueAssessment.Tests</AssemblyName>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\PanoramicData.IssueAssessment\PanoramicData.IssueAssessment.csproj" />
   </ItemGroup>
-
   <ItemGroup>
-    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="AwesomeAssertions" />
   </ItemGroup>
-
 </Project>

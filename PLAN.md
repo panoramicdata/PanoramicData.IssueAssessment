@@ -2,7 +2,7 @@
 
 **Version:** 1.0 (Pre-Implementation)  
 **Date:** May 12, 2026  
-**Status:** In Progress - Scaffold Complete, Build Stabilization Pending  
+**Status:** In Progress - Phase 1 Foundation Implemented  
 **Target Completion**: Staged delivery (Core → Assessments → Tests → Polish)
 
 ---
@@ -23,20 +23,22 @@ This plan details the complete scaffold and implementation of `PanoramicData.Iss
 - CI/CD scaffolding is present with test and publish workflows.
 - The solution file and all four project files are in place for the library, tests, docs, and examples projects.
 - The initial commit has already been created.
+- Package management mismatch was stabilized and `dotnet test` now restores/builds cleanly.
+- Phase 1.1-1.4 baseline implementation is complete (core interfaces, configuration records, result records, and `IssueAssessor` skeleton).
+- `IssueAssessor` construction-time validation is wired via `OptionsValidator` and covered by unit tests.
 
 ### In Progress
-- Package/version management is being stabilized so the repository can complete a clean `dotnet restore` and `dotnet build -c Release`.
-- The current focus is on making sure the project files and `Directory.Packages.props` agree on the package management model before moving into Phase 1 code.
+- Phase 1.5 validation scope is partially complete and currently focused on shared configuration rules.
+- Next implementation slice is Phase 2 assessment primitives (starting with Regex + Presence).
 
 ### Blocked / Needs Verification
-- Restore has been failing on package management issues rather than library code.
-- The repository needs one clean validation pass after the package reference model is confirmed.
-- Phase 1 implementation should not start until the build is green so the type surface can be added against a stable baseline.
+- Regex pattern validation and JSONPath validation are not yet available until assessment definitions and JSONPath helper are introduced.
+- 100% coverage gate is not yet being measured in CI for newly-added public surface.
 
 ### Handoff Notes
 - The plan is no longer a pre-work checklist; it is now a live implementation tracker.
-- Keep the next session focused on build stabilization first, then move into the core interfaces and immutable record types.
-- Preserve the existing architecture and do not expand scope until the foundation compiles cleanly.
+- Phase 1 foundation compiles and tests pass; continue by implementing Phase 2 assessment types and supporting utilities.
+- Preserve the existing architecture and keep changes incremental with tests per feature slice.
 
 ---
 
@@ -224,28 +226,28 @@ public enum AssessmentFailureReason
 }
 ```
 
-- [ ] Implement all record types as immutable (C# 10 records with `init` properties)
+- [x] Implement all record types as immutable (C# 10 records with `init` properties)
 
 ### 1.2 Create Configuration Records
 
 **File:** `src/PanoramicData.IssueAssessment/Configuration/AssessmentOptions.cs`
 
-- [ ] `AssessmentOptions` (top-level, record)
-- [ ] `AssessmentCategory` (per-category, record)
-- [ ] `Assessment` (per-assessment, record)
-- [ ] All with full XML documentation
+- [x] `AssessmentOptions` (top-level, record)
+- [x] `AssessmentCategory` (per-category, record)
+- [x] `Assessment` (per-assessment, record)
+- [x] All with full XML documentation
 
 ### 1.3 Create Result Records
 
 **File:** `src/PanoramicData.IssueAssessment/Results/AssessmentResult.cs`
 
-- [ ] `AssessmentResult`
-- [ ] `CategoryResult`
-- [ ] `AssessmentScore` (raw + normalized)
-- [ ] `AssessmentExecutionResult`
-- [ ] `AssessmentFailure`
-- [ ] `AssessmentAggregations`
-- [ ] `AggregationMetrics`, `PercentileMetrics`, `WeightedAggregationMetrics`
+- [x] `AssessmentResult`
+- [x] `CategoryResult`
+- [x] `AssessmentScore` (raw + normalized)
+- [x] `AssessmentExecutionResult`
+- [x] `AssessmentFailure`
+- [x] `AssessmentAggregations`
+- [x] `AggregationMetrics`, `PercentileMetrics`, `WeightedAggregationMetrics`
 
 ### 1.4 Create Main Assessor Class Skeleton
 
@@ -287,16 +289,19 @@ public class IssueAssessor
 }
 ```
 
+- [x] Implement constructor with options validation and dependency capture
+- [x] Add `AssessAsync` and `AssessManyAsync` method scaffolding with cancellation support
+
 ### 1.5 Validation Engine
 
 **File:** `src/PanoramicData.IssueAssessment/Validation/OptionsValidator.cs`
 
 - [ ] Validate regex patterns (compile & throw if invalid)
 - [ ] Validate JSONPath expressions (parse & throw if malformed)
-- [ ] Validate weight ranges [-100, 100]
-- [ ] Validate timeout values (positive)
-- [ ] Validate virtual extension config (fail if parallel + attempted extension)
-- [ ] Provide clear error messages for construction-time failures
+- [x] Validate weight ranges [-100, 100]
+- [x] Validate timeout values (positive)
+- [x] Validate virtual extension config (fail if parallel + attempted extension)
+- [x] Provide clear error messages for construction-time failures
 
 ---
 
