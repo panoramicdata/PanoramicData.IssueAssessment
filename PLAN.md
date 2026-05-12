@@ -297,7 +297,7 @@ public class IssueAssessor
 **File:** `src/PanoramicData.IssueAssessment/Validation/OptionsValidator.cs`
 
 - [ ] Validate regex patterns (compile & throw if invalid)
-- [ ] Validate JSONPath expressions (parse & throw if malformed)
+- [x] Validate JSONPath expressions (parse & throw if malformed)
 - [x] Validate weight ranges [-100, 100]
 - [x] Validate timeout values (positive)
 - [x] Validate virtual extension config (fail if parallel + attempted extension)
@@ -313,7 +313,7 @@ public class IssueAssessor
 
 Create 10 assessment types, each in its own file:
 
-- [ ] **RegexAssessment.cs**: Pattern matching
+- [x] **RegexAssessment.cs**: Pattern matching
   ```csharp
   public record RegexAssessment : IAssessmentDefinition
   {
@@ -330,41 +330,41 @@ Create 10 assessment types, each in its own file:
   }
   ```
 
-- [ ] **PresenceAssessment.cs**: Field presence
-- [ ] **StringLengthAssessment.cs**: Text length range
-- [ ] **WordCountAssessment.cs**: Word count range
-- [ ] **NumericRangeAssessment.cs**: Numeric value range
-- [ ] **DateRangeAssessment.cs**: Date range validation
-- [ ] **EnumAssessment.cs**: Value in whitelist
-- [ ] **PatternCountAssessment.cs**: Pattern occurrence counting
-- [ ] **JsonPathSelectorAssessment.cs**: Custom logic on JsonPath result
-- [ ] **CustomCallbackAssessment.cs**: Arbitrary async callback
+- [x] **PresenceAssessment.cs**: Field presence
+- [x] **StringLengthAssessment.cs**: Text length range
+- [x] **WordCountAssessment.cs**: Word count range
+- [x] **NumericRangeAssessment.cs**: Numeric value range
+- [x] **DateRangeAssessment.cs**: Date range validation
+- [x] **EnumAssessment.cs**: Value in whitelist
+- [x] **PatternCountAssessment.cs**: Pattern occurrence counting
+- [x] **JsonPathSelectorAssessment.cs**: Custom logic on JsonPath result
+- [x] **CustomCallbackAssessment.cs**: Arbitrary async callback
 
 ### 2.2 JSONPath Helper
 
 **File:** `src/PanoramicData.IssueAssessment/Utilities/JsonPathHelper.cs`
 
-- [ ] Parse JSONPath expressions using `System.Text.Json` (no external libraries)
-- [ ] Navigate JsonDocument/JsonNode
-- [ ] Return selected values or null if path not found
-- [ ] Throw `InvalidJsonPathException` for malformed paths
+- [x] Parse JSONPath expressions using `System.Text.Json` (no external libraries)
+- [x] Navigate JsonDocument/JsonNode
+- [x] Return selected values or null if path not found
+- [x] Throw `InvalidJsonPathException` for malformed paths
 
 ### 2.3 Regex Compiler Cache
 
 **File:** `src/PanoramicData.IssueAssessment/Utilities/RegexCache.cs`
 
-- [ ] Thread-safe cache of compiled regex patterns
-- [ ] Validate on first access, throw if invalid
-- [ ] Cache hit for repeated patterns
+- [x] Thread-safe cache of compiled regex patterns
+- [x] Validate on first access, throw if invalid
+- [x] Cache hit for repeated patterns
 
 ### 2.4 Score Calculation Engine
 
 **File:** `src/PanoramicData.IssueAssessment/Scoring/ScoreCalculator.cs`
 
-- [ ] Calculate `MinPossibleRaw` & `MaxPossibleRaw` for category/assessments
-- [ ] Normalize score: `(raw - min) / (max - min)`
-- [ ] Handle edge case: if min == max, return normalized score = 1.0 (or 0.5?)
-- [ ] Support weighted aggregation (simple & exponential)
+- [x] Calculate `MinPossibleRaw` & `MaxPossibleRaw` for category/assessments
+- [x] Normalize score: `(raw - min) / (max - min)`
+- [x] Handle edge case: if min == max, return normalized score = 1.0 (or 0.5?)
+- [x] Support weighted aggregation (simple & exponential)
 
 ### 2.5 Built-in Base Categories
 

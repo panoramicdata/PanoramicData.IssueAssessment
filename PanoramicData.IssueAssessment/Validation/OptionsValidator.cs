@@ -128,6 +128,8 @@ public static class OptionsValidator
 			}
 		}
 
+		ValidateDefinitionSpecificConfiguration(category, assessment);
+
 		if (assessment.Weight < MinimumWeight || assessment.Weight > MaximumWeight)
 		{
 			throw new ArgumentException(
@@ -148,6 +150,118 @@ public static class OptionsValidator
 			throw new ArgumentException(
 				$"Assessment '{assessment.Name}' in category '{category.Name}' enables virtual extension but does not "
 				+ "define VirtualOutputName.",
+				nameof(assessment));
+		}
+	}
+
+	private static void ValidateDefinitionSpecificConfiguration(AssessmentCategory category, Assessment assessment)
+	{
+		switch (assessment.Definition)
+		{
+			case StringLengthAssessment stringLengthAssessment:
+				ValidateInclusiveRange(
+					category,
+					assessment,
+					stringLengthAssessment.MinimumLength,
+					stringLengthAssessment.MaximumLength,
+					allowNegativeMinimum: false,
+					minimumName: nameof(StringLengthAssessment.MinimumLength),
+					maximumName: nameof(StringLengthAssessment.MaximumLength));
+				break;
+
+			case WordCountAssessment wordCountAssessment:
+				ValidateInclusiveRange(
+					category,
+					assessment,
+					wordCountAssessment.MinimumWordCount,
+					wordCountAssessment.MaximumWordCount,
+					allowNegativeMinimum: false,
+					minimumName: nameof(WordCountAssessment.MinimumWordCount),
+					maximumName: nameof(WordCountAssessment.MaximumWordCount));
+				break;
+
+			case NumericRangeAssessment numericRangeAssessment when numericRangeAssessment.MinValue.HasValue && numericRangeAssessment.MaxValue.HasValue && numericRangeAssessment.MinValue.Value > numericRangeAssessment.MaxValue.Value:
+				throw new ArgumentException(
+					$"Assessment '{assessment.Name}' in category '{category.Name}' has MinValue greater than MaxValue.",
+					nameof(assessment));
+
+			case DateRangeAssessment dateRangeAssessment when dateRangeAssessment.MinDate.HasValue && dateRangeAssessment.MaxDate.HasValue && dateRangeAssessment.MinDate.Value > dateRangeAssessment.MaxDate.Value:
+				throw new ArgumentException(
+					$"Assessment '{assessment.Name}' in category '{category.Name}' has MinDate greater than MaxDate.",
+					nameof(assessment));
+
+			case PatternCountAssessment patternCountAssessment:
+				ValidateOptionalInclusiveRange(
+					category,
+					assessment,
+					patternCountAssessment.MinMatches,
+					patternCountAssessment.MaxMatches,
+					allowNegativeMinimum: false,
+					minimumName: nameof(PatternCountAssessment.MinMatches),
+					maximumName: nameof(PatternCountAssessment.MaxMatches));
+				break;
+
+			case EnumAssessment enumAssessment when enumAssessment.AllowedValues.Count == 0:
+				throw new ArgumentException(
+					$"Assessment '{assessment.Name}' in category '{category.Name}' must define at least one allowed value.",
+					nameof(assessment));
+
+			case JsonPathSelectorAssessment jsonPathSelectorAssessment when jsonPathSelectorAssessment.Evaluator is null:
+				throw new ArgumentException(
+					$"Assessment '{assessment.Name}' in category '{category.Name}' must define an evaluator.",
+					nameof(assessment));
+
+			case CustomCallbackAssessment customCallbackAssessment when customCallbackAssessment.Callback is null:
+				throw new ArgumentException(
+					$"Assessment '{assessment.Name}' in category '{category.Name}' must define a callback.",
+					nameof(assessment));
+		}
+	}
+
+	private static void ValidateInclusiveRange(
+		AssessmentCategory category,
+		Assessment assessment,
+		int minimum,
+		int maximum,
+		bool allowNegativeMinimum,
+		string minimumName,
+		string maximumName)
+	{
+		if (!allowNegativeMinimum && minimum < 0)
+		{
+			throw new ArgumentException(
+				$"Assessment '{assessment.Name}' in category '{category.Name}' has invalid {minimumName} {minimum}.",
+				nameof(assessment));
+		}
+
+		if (maximum < minimum)
+		{
+			throw new ArgumentException(
+				$"Assessment '{assessment.Name}' in category '{category.Name}' has {maximumName} less than {minimumName}.",
+				nameof(assessment));
+		}
+	}
+
+	private static void ValidateOptionalInclusiveRange(
+		AssessmentCategory category,
+		Assessment assessment,
+		int? minimum,
+		int? maximum,
+		bool allowNegativeMinimum,
+		string minimumName,
+		string maximumName)
+	{
+		if (minimum.HasValue && !allowNegativeMinimum && minimum.Value < 0)
+		{
+			throw new ArgumentException(
+				$"Assessment '{assessment.Name}' in category '{category.Name}' has invalid {minimumName} {minimum.Value}.",
+				nameof(assessment));
+		}
+
+		if (minimum.HasValue && maximum.HasValue && maximum.Value < minimum.Value)
+		{
+			throw new ArgumentException(
+				$"Assessment '{assessment.Name}' in category '{category.Name}' has {maximumName} less than {minimumName}.",
 				nameof(assessment));
 		}
 	}

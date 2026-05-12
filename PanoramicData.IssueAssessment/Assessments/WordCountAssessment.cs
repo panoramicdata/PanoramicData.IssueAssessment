@@ -1,9 +1,4 @@
 namespace PanoramicData.IssueAssessment.Assessments;
-
-using PanoramicData.IssueAssessment.Core;
-using PanoramicData.IssueAssessment.Results;
-using PanoramicData.IssueAssessment.Utilities;
-
 /// <summary>
 /// Assesses whether a selected string value word count falls within an inclusive range.
 /// </summary>
