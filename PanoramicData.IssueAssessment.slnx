@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="PanoramicData.IssueAssessment.Docs/PanoramicData.IssueAssessment.Docs.csproj" />
+  <Project Path="PanoramicData.IssueAssessment.Examples/PanoramicData.IssueAssessment.Examples.csproj" />
+  <Project Path="PanoramicData.IssueAssessment.Tests/PanoramicData.IssueAssessment.Tests.csproj" />
+  <Project Path="PanoramicData.IssueAssessment/PanoramicData.IssueAssessment.csproj" />
+</Solution>

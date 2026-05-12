@@ -1,16 +1,15 @@
 <Project>
   <ItemGroup>
     <!-- Core dependencies -->
-    <PackageVersion Include="System.Collections.Immutable" Version="10.0.0" />
+    <PackageVersion Include="System.Collections.Immutable" Version="10.0.7" />
     
     <!-- NCalcExtensions for potential future use -->
-    <PackageVersion Include="PanoramicData.NCalcExtensions" Version="1.0.0" />
+    <PackageVersion Include="PanoramicData.NCalcExtensions" Version="5.8.33" />
     
     <!-- Testing -->
-    <PackageVersion Include="xunit" Version="2.8.1" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.1" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.1" />
-    <PackageVersion Include="AwesomeAssertions" Version="1.12.0" />
-    <PackageVersion Include="Xunit3" Version="1.0.0" />
+    <PackageVersion Include="xunit" Version="3.0.0" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.5.1" />
+    <PackageVersion Include="AwesomeAssertions" Version="9.4.0" />
   </ItemGroup>
 </Project>
