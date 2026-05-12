@@ -372,13 +372,13 @@ Create 10 assessment types, each in its own file:
 
 Create 7 category definitions (as static factories returning `AssessmentCategory`):
 
-- [ ] `TitleQualityCategory.cs`
-- [ ] `DescriptionQualityCategory.cs`
-- [ ] `AcceptanceCriteriaCategory.cs`
-- [ ] `AssigneeOwnershipCategory.cs`
-- [ ] `DueDateTimelineCategory.cs`
-- [ ] `ReproducibilityCategory.cs`
-- [ ] `AiSuitabilityCategory.cs`
+- [x] `TitleQualityCategory.cs`
+- [x] `DescriptionQualityCategory.cs`
+- [x] `AcceptanceCriteriaCategory.cs`
+- [x] `AssigneeOwnershipCategory.cs`
+- [x] `DueDateTimelineCategory.cs`
+- [x] `ReproducibilityCategory.cs`
+- [x] `AiSuitabilityCategory.cs`
 
 Each returns fully configured `AssessmentCategory` with assessments, weights, documentation.
 
