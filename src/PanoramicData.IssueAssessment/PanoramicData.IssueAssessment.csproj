@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>PanoramicData.IssueAssessment</RootNamespace>
+    <AssemblyName>PanoramicData.IssueAssessment</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Collections.Immutable" />
+    <PackageReference Include="PanoramicData.NCalcExtensions" />
+  </ItemGroup>
+
+</Project>
