@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using PanoramicData.IssueAssessment.Gates;
+
 namespace PanoramicData.IssueAssessment.Core;
 /// <summary>
 /// Defines immutable options used to configure issue assessments.
@@ -56,6 +59,17 @@ public interface IAssessmentOptions
 /// <summary>
 /// Defines an executable assessment implementation.
 /// </summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(PresenceAssessment), "presence")]
+[JsonDerivedType(typeof(RegexAssessment), "regex")]
+[JsonDerivedType(typeof(StringLengthAssessment), "stringLength")]
+[JsonDerivedType(typeof(WordCountAssessment), "wordCount")]
+[JsonDerivedType(typeof(NumericRangeAssessment), "numericRange")]
+[JsonDerivedType(typeof(DateRangeAssessment), "dateRange")]
+[JsonDerivedType(typeof(EnumAssessment), "enum")]
+[JsonDerivedType(typeof(PatternCountAssessment), "patternCount")]
+[JsonDerivedType(typeof(TieredAssessment), "tiered")]
+[JsonDerivedType(typeof(NamedAssessmentDefinition), "named")]
 public interface IAssessmentDefinition
 {
 	/// <summary>
@@ -112,6 +126,9 @@ public interface IRegexPatternAssessmentDefinition
 /// <summary>
 /// Defines a gate condition that controls whether the next series category should execute.
 /// </summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(ScoreThresholdGate), "scoreThreshold")]
+[JsonDerivedType(typeof(NoFailuresGate), "noFailures")]
 public interface ISeriesGateCondition
 {
 	/// <summary>

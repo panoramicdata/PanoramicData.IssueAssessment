@@ -147,4 +147,10 @@ public sealed record Assessment
 	/// Gets what to recommend when the assessment does not pass. A tier's own recommendation takes precedence.
 	/// </summary>
 	public string? Recommendation { get; init; }
+
+	/// <summary>
+	/// Gets the explanation reported when <see cref="AppliesWhen"/> is false, for example "○ Component: not used by this
+	/// project". When not set, a not-applicable assessment reports an empty explanation.
+	/// </summary>
+	public string? NotApplicableExplanation { get; init; }
 }

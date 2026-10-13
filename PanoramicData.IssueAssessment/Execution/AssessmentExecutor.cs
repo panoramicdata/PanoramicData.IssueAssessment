@@ -85,7 +85,7 @@ internal static class AssessmentExecutor
 			AssessmentResult: new AssessmentResult(
 				AssessmentName: assessment.Name,
 				Score: new AssessmentScore(null, null, 0d, 0d),
-				ExplanationText: "Not applicable.",
+				ExplanationText: assessment.NotApplicableExplanation ?? string.Empty,
 				FailureReason: null,
 				InnerException: null)
 			{

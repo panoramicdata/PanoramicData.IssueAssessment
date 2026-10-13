@@ -9,7 +9,7 @@ internal static class AssessmentValidator
 	private const double MinimumWeight = -100d;
 	private const double MaximumWeight = 100d;
 
-	internal static void Validate(AssessmentCategory category, Assessment assessment)
+	internal static void Validate(AssessmentCategory category, Assessment assessment, RuleScope scope)
 	{
 		ArgumentNullException.ThrowIfNull(assessment);
 
@@ -24,7 +24,8 @@ internal static class AssessmentValidator
 		{
 			error = SelectorError(assessment.Definition, out innerException)
 				?? DefinitionError(assessment.Definition)
-				?? SettingsError(assessment);
+				?? SettingsError(assessment)
+				?? RuleError(assessment, scope);
 		}
 
 		if (error is not null)
@@ -35,6 +36,18 @@ internal static class AssessmentValidator
 				innerException);
 		}
 	}
+
+	/// <summary>
+	/// Validates the assessment's applicability condition and, for a tiered or named definition, its rules.
+	/// </summary>
+	private static string? RuleError(Assessment assessment, RuleScope scope)
+		=> RuleValidator.ConditionError(assessment.AppliesWhen, scope)
+			?? assessment.Definition switch
+			{
+				TieredAssessment tiered => TieredValidator.Error(tiered, scope),
+				NamedAssessmentDefinition named => $"refers to custom definition '{named.Name}', which was not registered when the rubric was loaded.",
+				_ => null,
+			};
 
 	private static string? AssessmentError(Assessment assessment)
 	{
