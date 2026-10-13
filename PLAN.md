@@ -15,7 +15,7 @@ The design is in [DESIGN.md](DESIGN.md). This file tracks what has been done and
 | 3 | Execution engine: assessment, category, series and parallel executors | ✅ |
 | 4 | Aggregation and virtual document finalizer | ✅ |
 | 5 | Caching: in-memory cache and cache keys | ✅ |
-| 6 | Test suite | ✅ 544 tests; 100% line coverage, 99.8% branch coverage |
+| 6 | Test suite | ✅ 545 tests; 100% line coverage, 99.8% branch coverage |
 | 7 | Documentation, examples, calibration, release notes | ✅ |
 | 8 | GitHub repository, Codacy, NuGet publishing | ⏳ Blocked: needs the repository created and trusted publishing configured |
 | 9 | Consuming repositories | ⏳ Optional; after publishing |

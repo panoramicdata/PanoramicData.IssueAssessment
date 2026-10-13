@@ -265,7 +265,7 @@ thread): median 0.22 ms, 95th percentile 0.49 ms, 99th percentile 0.95 ms per ti
 
 ## Quality
 
-- 544 unit tests; 100% line coverage of the library (the one unmeasured branch is the compiler-generated null check
+- 545 unit tests; 100% line coverage of the library (the one unmeasured branch is the compiler-generated null check
   in `await foreach`).
 - Builds with zero warnings under `TreatWarningsAsErrors` and the `latest-recommended` analyzers.
 - CodeQL and Codacy analysis on every push.
