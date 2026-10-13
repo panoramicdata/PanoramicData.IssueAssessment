@@ -1,0 +1,14 @@
+{
+  "result": {
+    "sys_id": "9d385017c611228701d22104cc95c371",
+    "number": "INC0010093",
+    "short_description": "VPN broken",
+    "description": "doesn't work since this morning",
+    "priority": "2",
+    "state": "1",
+    "assigned_to": "",
+    "assignment_group": { "display_value": "Network Operations" },
+    "due_date": "",
+    "opened_at": "2026-10-12 08:14:03"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "10482",
+  "key": "OPS-1287",
+  "self": "https://example.atlassian.net/rest/api/2/issue/10482",
+  "fields": {
+    "summary": "Export to CSV drops rows whose description contains a line break",
+    "issuetype": { "name": "Bug" },
+    "priority": { "name": "High" },
+    "status": { "name": "In Progress" },
+    "assignee": {
+      "accountId": "5f1a2b3c4d5e6f0011223344",
+      "displayName": "Alex Morgan",
+      "active": true
+    },
+    "reporter": { "displayName": "Sam Patel" },
+    "duedate": "2026-11-20",
+    "description": "When a ticket's description contains a line break, the CSV export silently skips that ticket. Customers comparing the export with the on-screen list see fewer rows than expected, and nothing in the UI or the logs says rows were dropped.\n\nh3. Steps to reproduce\n# Create a ticket whose description has two lines.\n# Open the ticket list and choose Export > CSV.\n# Open the file and count the rows.\n\nh3. Expected\nEvery ticket in the list appears in the file, with line breaks quoted as RFC 4180 requires.",
+    "customfield_10034": "Given a ticket whose description contains CR, LF or CRLF, when the list is exported to CSV, then the ticket appears exactly once, its description is quoted, and the file opens in Excel and LibreOffice with the same row count as the list."
+  }
+}

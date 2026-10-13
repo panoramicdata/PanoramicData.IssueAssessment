@@ -1,0 +1,15 @@
+{
+  "number": 412,
+  "html_url": "https://github.com/example-org/example-repo/issues/412",
+  "title": "Retry handler resends a POST after the server has already accepted it",
+  "state": "open",
+  "user": { "login": "reporter-dev" },
+  "assignee": { "login": "maintainer-one" },
+  "assignees": [ { "login": "maintainer-one" } ],
+  "labels": [ { "name": "bug" }, { "name": "area-http" } ],
+  "milestone": {
+    "title": "v2.4",
+    "due_on": "2026-12-01T08:00:00Z"
+  },
+  "body": "<!-- Thanks for reporting a bug! Please fill in the sections below. -->\n\n### Description\n\nWhen a POST times out on the client after the server has processed it, the retry handler sends the same request again, so the server creates a duplicate record. Idempotent verbs are fine; only non-idempotent requests are affected.\n\n### Steps to reproduce\n\n1. Configure the client with a 1 second timeout and three retries.\n2. Point it at a server that sleeps 2 seconds before answering a POST.\n3. Send one POST and count the records the server created.\n\n### Expected behavior\n\nA POST is retried only when the connection failed before the request was sent; one request creates exactly one record.\n\n<details>\n<summary>Environment</summary>\n\n| Item | Value |\n|---|---|\n| OS | Ubuntu 24.04 |\n| .NET | 10.0.4 |\n\n</details>\n"
+}
