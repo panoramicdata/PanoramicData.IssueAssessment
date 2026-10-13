@@ -15,11 +15,9 @@ public class DelegateAssessmentContractTests
 	/// Builds the named assessment around <paramref name="behaviour"/>, which the consumer delegate runs (and whose task
 	/// it awaits) before succeeding.
 	/// </summary>
-	private static IAssessmentDefinition Build(string kind, Func<CancellationToken, Task> behaviour) => kind switch
-	{
-		"callback" => new CustomCallbackAssessment { Callback = (_, _, token) => ThenSucceed(behaviour(token)) },
-		_ => new JsonPathSelectorAssessment { JsonPath = "$.title", Evaluator = (_, token) => ThenTrue(behaviour(token)), FailureScore = 0.25d },
-	};
+	private static IAssessmentDefinition Build(string kind, Func<CancellationToken, Task> behaviour) => kind == "callback"
+		? new CustomCallbackAssessment { Callback = (_, _, token) => ThenSucceed(behaviour(token)) }
+		: new JsonPathSelectorAssessment { JsonPath = "$.title", Evaluator = (_, token) => ThenTrue(behaviour(token)), FailureScore = 0.25d };
 
 	private static async Task<(double?, string, Exception?)> ThenSucceed(Task task)
 	{
