@@ -154,7 +154,7 @@ public static class JsonPathHelper
 			throw new InvalidJsonPathException($"JSONPath segment '{segment}' is missing a property name.");
 		}
 
-		if (!int.TryParse(indexText, out int index))
+		if (!int.TryParse(indexText, NumberStyles.None, CultureInfo.InvariantCulture, out int index))
 		{
 			throw new InvalidJsonPathException($"JSONPath segment '{segment}' contains a non-numeric array index.");
 		}
