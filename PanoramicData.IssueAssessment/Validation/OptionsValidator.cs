@@ -184,7 +184,6 @@ public static class OptionsValidator
 					assessment,
 					stringLengthAssessment.MinimumLength,
 					stringLengthAssessment.MaximumLength,
-					allowNegativeMinimum: false,
 					minimumName: nameof(StringLengthAssessment.MinimumLength),
 					maximumName: nameof(StringLengthAssessment.MaximumLength));
 				break;
@@ -195,7 +194,6 @@ public static class OptionsValidator
 					assessment,
 					wordCountAssessment.MinimumWordCount,
 					wordCountAssessment.MaximumWordCount,
-					allowNegativeMinimum: false,
 					minimumName: nameof(WordCountAssessment.MinimumWordCount),
 					maximumName: nameof(WordCountAssessment.MaximumWordCount));
 				break;
@@ -216,7 +214,6 @@ public static class OptionsValidator
 					assessment,
 					patternCountAssessment.MinMatches,
 					patternCountAssessment.MaxMatches,
-					allowNegativeMinimum: false,
 					minimumName: nameof(PatternCountAssessment.MinMatches),
 					maximumName: nameof(PatternCountAssessment.MaxMatches));
 				break;
@@ -243,11 +240,10 @@ public static class OptionsValidator
 		Assessment assessment,
 		int minimum,
 		int maximum,
-		bool allowNegativeMinimum,
 		string minimumName,
 		string maximumName)
 	{
-		if (!allowNegativeMinimum && minimum < 0)
+		if (minimum < 0)
 		{
 			throw new ArgumentException(
 				$"Assessment '{assessment.Name}' in category '{category.Name}' has invalid {minimumName} {minimum}.",
@@ -267,11 +263,10 @@ public static class OptionsValidator
 		Assessment assessment,
 		int? minimum,
 		int? maximum,
-		bool allowNegativeMinimum,
 		string minimumName,
 		string maximumName)
 	{
-		if (minimum.HasValue && !allowNegativeMinimum && minimum.Value < 0)
+		if (minimum is < 0)
 		{
 			throw new ArgumentException(
 				$"Assessment '{assessment.Name}' in category '{category.Name}' has invalid {minimumName} {minimum.Value}.",

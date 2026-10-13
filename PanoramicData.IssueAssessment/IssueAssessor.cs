@@ -1,6 +1,5 @@
 
 using System.Runtime.CompilerServices;
-
 using PanoramicData.IssueAssessment.Aggregation;
 using PanoramicData.IssueAssessment.Execution;
 

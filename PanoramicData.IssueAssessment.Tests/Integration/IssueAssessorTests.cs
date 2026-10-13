@@ -106,6 +106,43 @@ public class IssueAssessorTests : TestBase
 		seen.Should().Be(1);
 	}
 
+	[Fact]
+	public async Task AssessAsync_FailureWithoutExplanation_UsesGenericFailureMessage()
+	{
+		using JsonDocument issue = ParseIssue();
+		StubDefinition silentFailure = new() { Explanation = null, FailureReason = AssessmentFailureReason.ConfigurationError };
+
+		IAssessmentResult result = await new IssueAssessor(Options(silentFailure)).AssessAsync(issue, CancellationToken);
+
+		result.Failures.Should().ContainSingle().Which.Message.Should().Be("Assessment failed.");
+		result.Categories[0].Assessments[0].ExplanationText.Should().BeEmpty();
+	}
+
+	[Fact]
+	public async Task AssessManyAsync_IssueThatFails_StopsWithTheException()
+	{
+		IssueAssessor assessor = new(Options());
+		int seen = 0;
+
+		Func<Task> act = async () =>
+		{
+			await foreach (IAssessmentResult _ in assessor.AssessManyAsync(IssuesThenNull(), CancellationToken))
+			{
+				seen++;
+			}
+		};
+
+		await act.Should().ThrowAsync<ArgumentNullException>();
+		seen.Should().Be(1);
+	}
+
+	private static async IAsyncEnumerable<JsonDocument> IssuesThenNull()
+	{
+		await Task.Yield();
+		yield return JsonDocument.Parse("{}");
+		yield return null!;
+	}
+
 	private static async IAsyncEnumerable<JsonDocument> Issues(int count)
 	{
 		for (int index = 0; index < count; index++)
