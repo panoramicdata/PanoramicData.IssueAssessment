@@ -43,7 +43,8 @@ public static class DueDateTimelineCategory
 					Definition = new DateRangeAssessment
 					{
 						JsonPath = "$.dueDate",
-						DateFormat = "O",
+						// Blank format: DateRangeAssessment falls back to DateTime.TryParse (InvariantCulture, RoundtripKind).
+						DateFormat = string.Empty,
 						MinDate = utcToday.AddDays(-1),
 						MaxDate = utcToday.AddYears(2),
 						SuccessScore = 1.0d,
