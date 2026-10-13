@@ -1,6 +1,9 @@
 
 using System.Runtime.CompilerServices;
 
+using PanoramicData.IssueAssessment.Aggregation;
+using PanoramicData.IssueAssessment.Execution;
+
 namespace PanoramicData.IssueAssessment;
 /// <summary>
 /// Main entry point for issue assessment execution.
@@ -32,15 +35,48 @@ public class IssueAssessor
 	/// <param name="cancellationToken">Cancellation token.</param>
 	/// <returns>The assessment result.</returns>
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="issue"/> is null.</exception>
-	public Task<IAssessmentResult> AssessAsync(JsonDocument issue, CancellationToken cancellationToken = default)
+	public async Task<IAssessmentResult> AssessAsync(JsonDocument issue, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(issue);
 		cancellationToken.ThrowIfCancellationRequested();
 
-		_ = _options;
-		_ = _cacheProvider;
+		if (_cacheProvider is not null)
+		{
+			IAssessmentResult? cached = await _cacheProvider.GetAsync(issue, _options, cancellationToken).ConfigureAwait(false);
+			if (cached is not null)
+			{
+				return cached;
+			}
+		}
 
-		throw new NotImplementedException("Assessment execution will be implemented in a later phase.");
+		using CancellationTokenSource? globalTimeoutCts = _options.GlobalTimeout.HasValue
+			? new CancellationTokenSource(_options.GlobalTimeout.Value)
+			: null;
+		using CancellationTokenSource linkedCts = globalTimeoutCts is null
+			? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)
+			: CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, globalTimeoutCts.Token);
+
+		ExecutionResult executionResult = _options.ExecutionStrategy == CategoryExecutionStrategy.Parallel
+			? await ParallelExecutor.ExecuteAsync(_options, issue, linkedCts.Token).ConfigureAwait(false)
+			: await SeriesExecutor.ExecuteAsync(_options, issue, linkedCts.Token).ConfigureAwait(false);
+
+		AssessmentAggregations aggregations = AggregationCalculator.Calculate(executionResult.Categories);
+		JsonDocument? virtualDocument = _options.CaptureVirtualDocument ? executionResult.VirtualDocument : null;
+
+		IssueAssessmentResult result = new()
+		{
+			Categories = executionResult.Categories,
+			Failures = executionResult.Failures,
+			Aggregations = aggregations,
+			VirtualDocument = virtualDocument,
+		};
+
+		if (_cacheProvider is not null)
+		{
+			_ = await _cacheProvider.SetAsync(issue, _options, result, cancellationToken).ConfigureAwait(false);
+		}
+
+		return result;
 	}
 
 	/// <summary>

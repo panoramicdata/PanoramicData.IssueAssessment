@@ -6,8 +6,4 @@
     <AssemblyName>PanoramicData.IssueAssessment</AssemblyName>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="PanoramicData.NCalcExtensions" />
-  </ItemGroup>
-
 </Project>

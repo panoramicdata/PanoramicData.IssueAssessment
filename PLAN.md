@@ -395,6 +395,11 @@ Each returns fully configured `AssessmentCategory` with assessments, weights, do
 - [ ] Manage timeouts per category
 - [ ] Aggregate assessment results into category score
 - [ ] Return `CategoryResult`
+- [x] Execute single category (parallel vs. series assessments)
+- [x] Handle virtual object extension chaining (series only)
+- [x] Manage timeouts per category
+- [x] Aggregate assessment results into category score
+- [x] Return `CategoryResult`
 
 ### 3.2 Assessment Executor
 
@@ -405,6 +410,11 @@ Each returns fully configured `AssessmentCategory` with assessments, weights, do
 - [ ] Manage assessment-level timeout
 - [ ] Capture explanation text & virtual extension output
 - [ ] Return `AssessmentExecutionResult`
+- [x] Execute single assessment
+- [x] Handle failures (null score + reason)
+- [x] Manage assessment-level timeout
+- [x] Capture explanation text & virtual extension output
+- [x] Return `AssessmentExecutionResult`
 
 ### 3.3 Series Executor
 
@@ -415,6 +425,11 @@ Each returns fully configured `AssessmentCategory` with assessments, weights, do
 - [ ] Evaluate gate conditions before each category
 - [ ] Short-circuit if gate returns false
 - [ ] Collect failures throughout
+- [x] Execute categories in series (one after another)
+- [x] Pass virtual extension from prior category to next
+- [x] Evaluate gate conditions before each category
+- [x] Short-circuit if gate returns false
+- [x] Collect failures throughout
 
 ### 3.4 Parallel Executor
 
@@ -424,6 +439,10 @@ Each returns fully configured `AssessmentCategory` with assessments, weights, do
 - [ ] Validate no virtual extensions in parallel (fail-fast)
 - [ ] Manage global timeout
 - [ ] Collect failures from all parallel tasks
+- [x] Execute categories in parallel using `Task.WhenAll`
+- [x] Validate no virtual extensions in parallel (fail-fast)
+- [x] Manage global timeout
+- [x] Collect failures from all parallel tasks
 
 ### 3.5 Main Assessment Flow
 
@@ -437,6 +456,14 @@ Each returns fully configured `AssessmentCategory` with assessments, weights, do
 - [ ] Optionally capture virtual document
 - [ ] Cache result
 - [ ] Return `IAssessmentResult`
+- [x] Implement `AssessAsync(JsonDocument, CancellationToken)`
+- [x] Check cache first
+- [x] Choose executor (series or parallel)
+- [x] Run executor
+- [x] Calculate aggregations
+- [x] Optionally capture virtual document
+- [x] Cache result
+- [x] Return `IAssessmentResult`
 
 ---
 
@@ -460,6 +487,9 @@ Each returns fully configured `AssessmentCategory` with assessments, weights, do
 - [ ] Combine virtual extensions from all assessments/categories
 - [ ] Build final `JsonDocument` with all extensions
 - [ ] Ensure no conflicts (assessment A and B both output to same path? → fail or merge?)
+- [x] Combine virtual extensions from all assessments/categories
+- [x] Build final `JsonDocument` with all extensions
+- [x] Ensure no conflicts (assessment A and B both output to same path? → fail or merge?)
 
 ---
 
@@ -504,6 +534,10 @@ public class InMemoryAssessmentCache : IAssessmentCacheProvider
 - [ ] Cache key: hash of (JsonDocument content, options definition)
 - [ ] Implement LRU eviction when max entries reached
 - [ ] Support optional TTL (default: no TTL)
+- [x] Use `ConcurrentDictionary` for thread safety
+- [x] Cache key: hash of (JsonDocument content, options definition)
+- [x] Implement LRU eviction when max entries reached
+- [x] Support optional TTL (default: no TTL)
 
 ### 5.2 Cache Key Generation
 
@@ -512,6 +546,9 @@ public class InMemoryAssessmentCache : IAssessmentCacheProvider
 - [ ] Generate stable hash from JsonDocument (content-based)
 - [ ] Generate stable hash from IAssessmentOptions (definition-based)
 - [ ] Combine into cache key
+- [x] Generate stable hash from JsonDocument (content-based)
+- [x] Generate stable hash from IAssessmentOptions (definition-based)
+- [x] Combine into cache key
 
 ---
 

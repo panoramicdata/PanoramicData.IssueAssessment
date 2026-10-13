@@ -58,20 +58,23 @@ public class IssueAssessorTests
 	}
 
 	[Fact]
-	public async Task AssessAsync_WhenExecutionNotImplemented_ThrowsNotImplementedException()
+	public async Task AssessAsync_WithValidOptions_ReturnsAssessmentResult()
 	{
 		IssueAssessor assessor = new(CreateValidOptions());
 		using JsonDocument issue = JsonDocument.Parse("{\"title\":\"Example\"}");
 
-		await Assert.ThrowsAsync<NotImplementedException>(
-			() => assessor.AssessAsync(issue, TestContext.Current.CancellationToken));
+		IAssessmentResult result = await assessor.AssessAsync(issue, TestContext.Current.CancellationToken);
+
+		result.Categories.Should().HaveCount(1);
+		result.Failures.Should().BeEmpty();
 	}
 
 	[Fact]
-	public async Task AssessManyAsync_WhenExecutionNotImplemented_ThrowsNotImplementedException()
+	public async Task AssessManyAsync_WithValidOptions_ReturnsResults()
 	{
 		IssueAssessor assessor = new(CreateValidOptions());
-		using JsonDocument issue = JsonDocument.Parse("{\"title\":\"Example\"}");
+		using JsonDocument issue1 = JsonDocument.Parse("{\"title\":\"Example 1\"}");
+		using JsonDocument issue2 = JsonDocument.Parse("{\"title\":\"Example 2\"}");
 
 		IAsyncEnumerable<JsonDocument> Issues()
 		{
@@ -79,16 +82,20 @@ public class IssueAssessorTests
 
 			async IAsyncEnumerable<JsonDocument> CreateIssues()
 			{
-				yield return issue;
+				yield return issue1;
+				yield return issue2;
 				await Task.CompletedTask;
 			}
 		}
 
-		IAsyncEnumerator<IAssessmentResult> enumerator = assessor
-			.AssessManyAsync(Issues(), TestContext.Current.CancellationToken)
-			.GetAsyncEnumerator(TestContext.Current.CancellationToken);
-		await Assert.ThrowsAsync<NotImplementedException>(async () => await enumerator.MoveNextAsync());
-		await enumerator.DisposeAsync();
+		List<IAssessmentResult> results = new();
+		await foreach (IAssessmentResult result in assessor.AssessManyAsync(Issues(), TestContext.Current.CancellationToken))
+		{
+			results.Add(result);
+		}
+
+		results.Should().HaveCount(2);
+		results.All(result => result.Categories.Count == 1).Should().BeTrue();
 	}
 
 	[Fact]
