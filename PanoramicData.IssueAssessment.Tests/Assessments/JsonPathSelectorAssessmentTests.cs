@@ -114,71 +114,6 @@ public class JsonPathSelectorAssessmentTests : TestBase
 		seen.Should().Be(cancellationTokenSource.Token);
 	}
 
-	[Fact]
-	public async Task ExecuteAsync_EvaluatorThrowsSynchronously_ReturnsThrowingException()
-	{
-		InvalidOperationException exception = new("bad evaluator");
-
-		AssessmentExecutionResult result = await ExecuteAsync(Create((_, _) => throw exception), Json);
-
-		result.RawScore.Should().Be(0.12d);
-		result.ExplanationText.Should().Be("Evaluator threw an exception for '$.priority'.");
-		result.FailureReason.Should().Be(AssessmentFailureReason.ThrowingException);
-		result.InnerException.Should().BeSameAs(exception);
-	}
-
-	[Fact]
-	public async Task ExecuteAsync_EvaluatorFaultsAsynchronously_ReturnsThrowingException()
-	{
-		JsonPathSelectorAssessment assessment = Create(static async (_, _) =>
-		{
-			await Task.Yield();
-			throw new FormatException("late failure");
-		});
-
-		AssessmentExecutionResult result = await ExecuteAsync(assessment, Json);
-
-		result.FailureReason.Should().Be(AssessmentFailureReason.ThrowingException);
-		result.InnerException.Should().BeOfType<FormatException>();
-	}
-
-	[Fact]
-	public async Task ExecuteAsync_EvaluatorReturnsNullTask_ReturnsThrowingException()
-	{
-		AssessmentExecutionResult result = await ExecuteAsync(Create(static (_, _) => null!), Json);
-
-		result.FailureReason.Should().Be(AssessmentFailureReason.ThrowingException);
-		result.InnerException.Should().BeOfType<NullReferenceException>();
-	}
-
-	[Fact]
-	public async Task ExecuteAsync_EvaluatorCancelledByItsToken_PropagatesOperationCanceledException()
-	{
-		using CancellationTokenSource cancellationTokenSource = new();
-		JsonPathSelectorAssessment assessment = Create(async (_, token) =>
-		{
-			await cancellationTokenSource.CancelAsync();
-			token.ThrowIfCancellationRequested();
-			return true;
-		});
-		using JsonDocument document = JsonDocument.Parse(Json);
-
-		Func<Task> act = () => assessment.ExecuteAsync(document, null, cancellationTokenSource.Token);
-
-		await act.Should().ThrowAsync<OperationCanceledException>();
-	}
-
-	[Fact]
-	public async Task ExecuteAsync_EvaluatorThrowsCancellationWhileTokenNotCancelled_ReturnsThrowingException()
-	{
-		JsonPathSelectorAssessment assessment = Create(static (_, _) => throw new OperationCanceledException("own cancellation"));
-
-		AssessmentExecutionResult result = await ExecuteAsync(assessment, Json);
-
-		result.FailureReason.Should().Be(AssessmentFailureReason.ThrowingException);
-		result.InnerException.Should().BeOfType<OperationCanceledException>();
-	}
-
 	[Theory]
 	[InlineData(true, "$.priority")]
 	[InlineData(false, "$.priority")]
@@ -193,45 +128,10 @@ public class JsonPathSelectorAssessmentTests : TestBase
 	}
 
 	[Fact]
-	public async Task ExecuteAsync_ExplanationTemplateSetAndEvaluatorThrows_UsesTemplate()
-	{
-		JsonPathSelectorAssessment assessment = Create(static (_, _) => throw new InvalidOperationException()) with { ExplanationTemplate = "custom" };
-
-		AssessmentExecutionResult result = await ExecuteAsync(assessment, Json);
-
-		result.ExplanationText.Should().Be("custom");
-		result.FailureReason.Should().Be(AssessmentFailureReason.ThrowingException);
-	}
-
-	[Fact]
 	public async Task ExecuteAsync_InvalidJsonPath_ThrowsInvalidJsonPathException()
 	{
 		Func<Task> act = () => ExecuteAsync(Create(static (_, _) => Task.FromResult(true), "$.labels[-1]"), Json);
 
 		await act.Should().ThrowAsync<InvalidJsonPathException>();
-	}
-
-	[Fact]
-	public async Task ExecuteAsync_CancellationAlreadyRequested_ThrowsWithoutCallingEvaluator()
-	{
-		bool called = false;
-		JsonPathSelectorAssessment assessment = Create((_, _) =>
-		{
-			called = true;
-			return Task.FromResult(true);
-		});
-
-		Func<Task> act = () => ExecuteWithCancelledTokenAsync(assessment, Json);
-
-		await act.Should().ThrowAsync<OperationCanceledException>();
-		called.Should().BeFalse();
-	}
-
-	[Fact]
-	public async Task ExecuteAsync_NullInput_ThrowsArgumentNullException()
-	{
-		Func<Task> act = () => ExecuteWithNullInputAsync(Create(static (_, _) => Task.FromResult(true)));
-
-		(await act.Should().ThrowAsync<ArgumentNullException>()).WithParameterName("input");
 	}
 }

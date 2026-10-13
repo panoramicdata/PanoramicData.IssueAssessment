@@ -133,14 +133,7 @@ public class TimeoutTests : TestBase
 	public async Task AssessAsync_GlobalTimeoutExpiresWhileGateWaits_ReturnsPartialResultWithGateTimeoutFailure()
 	{
 		StubDefinition next = new();
-		AssessmentCategory first = CreateSeriesCategory("First", CreateAssessment("Quick", new StubDefinition())) with
-		{
-			SeriesGateCondition = new CancellationObservingGate(),
-		};
-		AssessmentOptions options = CreateOptions(
-			CategoryExecutionStrategy.Series,
-			first,
-			CreateSeriesCategory("Next", CreateAssessment("Next", next))) with
+		AssessmentOptions options = GatedSeries("Quick", new StubDefinition(), next) with
 		{
 			GlobalTimeout = ShortTimeout,
 		};
@@ -158,14 +151,7 @@ public class TimeoutTests : TestBase
 	[Fact]
 	public async Task AssessAsync_GlobalTimeoutExpiredBeforeGate_RecordsGateTimeoutFailure()
 	{
-		AssessmentCategory first = CreateSeriesCategory("First", CreateAssessment("Slow", new DelayingDefinition())) with
-		{
-			SeriesGateCondition = new CancellationObservingGate(),
-		};
-		AssessmentOptions options = CreateOptions(
-			CategoryExecutionStrategy.Series,
-			first,
-			CreateSeriesCategory("Next", CreateAssessment("Next", new StubDefinition()))) with
+		AssessmentOptions options = GatedSeries("Slow", new DelayingDefinition(), new StubDefinition()) with
 		{
 			GlobalTimeout = ShortTimeout,
 		};
@@ -179,56 +165,34 @@ public class TimeoutTests : TestBase
 	[Fact]
 	public async Task AssessAsync_CallerCancelsDuringGate_ThrowsOperationCanceledException()
 	{
-		using CancellationTokenSource callerCts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken);
-		AssessmentCategory first = CreateSeriesCategory("First", CreateAssessment("Quick", new StubDefinition())) with
-		{
-			SeriesGateCondition = new CancellationObservingGate(),
-		};
-		AssessmentOptions options = CreateOptions(
-			CategoryExecutionStrategy.Series,
-			first,
-			CreateSeriesCategory("Next", CreateAssessment("Next", new StubDefinition())));
-		using JsonDocument issue = ParseIssue();
-		callerCts.CancelAfter(ShortTimeout);
+		AssessmentOptions options = GatedSeries("Quick", new StubDefinition(), new StubDefinition());
 
-		Func<Task> act = () => new IssueAssessor(options).AssessAsync(issue, callerCts.Token);
-
-		await act.Should().ThrowAsync<OperationCanceledException>();
+		await CallerCancellationShouldThrowAsync(options);
 	}
 
 	[Fact]
 	public async Task AssessAsync_CallerCancelsDuringAssessment_ThrowsOperationCanceledException()
 	{
-		using CancellationTokenSource callerCts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken);
 		DelayingDefinition slow = new();
 		AssessmentOptions options = CreateOptions(
 			CategoryExecutionStrategy.Series,
 			CreateSeriesCategory("Category", CreateAssessment("Slow", slow, timeout: SafetyNet)));
-		using JsonDocument issue = ParseIssue();
-		callerCts.CancelAfter(ShortTimeout);
 
-		Func<Task> act = () => new IssueAssessor(options).AssessAsync(issue, callerCts.Token);
-
-		await act.Should().ThrowAsync<OperationCanceledException>();
+		await CallerCancellationShouldThrowAsync(options);
 		slow.CancellationObserved.Should().BeTrue();
 	}
 
 	[Fact]
 	public async Task AssessAsync_CallerCancelsWithGlobalTimeoutConfigured_ThrowsOperationCanceledException()
 	{
-		using CancellationTokenSource callerCts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken);
 		AssessmentOptions options = CreateOptions(
 			CategoryExecutionStrategy.Parallel,
 			CreateSeriesCategory("Category", CreateAssessment("Slow", new DelayingDefinition()))) with
 		{
 			GlobalTimeout = SafetyNet,
 		};
-		using JsonDocument issue = ParseIssue();
-		callerCts.CancelAfter(ShortTimeout);
 
-		Func<Task> act = () => new IssueAssessor(options).AssessAsync(issue, callerCts.Token);
-
-		await act.Should().ThrowAsync<OperationCanceledException>();
+		await CallerCancellationShouldThrowAsync(options);
 	}
 
 	[Fact]
@@ -308,5 +272,21 @@ public class TimeoutTests : TestBase
 		item.Failure!.Reason.Should().Be(AssessmentFailureReason.ThrowingException);
 		item.Failure.InnerException.Should().BeSameAs(thrown);
 		item.AssessmentResult.InnerException.Should().BeSameAs(thrown);
+	}
+	private static AssessmentOptions GatedSeries(string firstAssessment, IAssessmentDefinition first, IAssessmentDefinition next)
+		=> CreateOptions(
+			CategoryExecutionStrategy.Series,
+			CreateSeriesCategory("First", CreateAssessment(firstAssessment, first)) with { SeriesGateCondition = new CancellationObservingGate() },
+			CreateSeriesCategory("Next", CreateAssessment("Next", next)));
+
+	private static async Task CallerCancellationShouldThrowAsync(AssessmentOptions options)
+	{
+		using CancellationTokenSource callerCts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken);
+		using JsonDocument issue = ParseIssue();
+		callerCts.CancelAfter(ShortTimeout);
+
+		Func<Task> act = () => new IssueAssessor(options).AssessAsync(issue, callerCts.Token);
+
+		await act.Should().ThrowAsync<OperationCanceledException>();
 	}
 }

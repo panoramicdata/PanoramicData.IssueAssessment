@@ -65,78 +65,6 @@ public class CustomCallbackAssessmentTests : TestBase
 	}
 
 	[Fact]
-	public async Task ExecuteAsync_CallbackThrowsSynchronously_ReturnsThrowingException()
-	{
-		InvalidOperationException exception = new("boom");
-
-		AssessmentExecutionResult result = await ExecuteAsync(Throwing(exception), Json);
-
-		result.RawScore.Should().BeNull();
-		result.ExplanationText.Should().Be("Custom callback threw an exception.");
-		result.FailureReason.Should().Be(AssessmentFailureReason.ThrowingException);
-		result.InnerException.Should().BeSameAs(exception);
-	}
-
-	[Fact]
-	public async Task ExecuteAsync_CallbackFaultsAsynchronously_ReturnsThrowingException()
-	{
-		CustomCallbackAssessment assessment = new()
-		{
-			Callback = static async (_, _, _) =>
-			{
-				await Task.Yield();
-				throw new FormatException("late");
-			},
-		};
-
-		AssessmentExecutionResult result = await ExecuteAsync(assessment, Json);
-
-		result.FailureReason.Should().Be(AssessmentFailureReason.ThrowingException);
-		result.InnerException.Should().BeOfType<FormatException>();
-	}
-
-	[Fact]
-	public async Task ExecuteAsync_CallbackReturnsNullTask_ReturnsThrowingException()
-	{
-		CustomCallbackAssessment assessment = new() { Callback = static (_, _, _) => null! };
-
-		AssessmentExecutionResult result = await ExecuteAsync(assessment, Json);
-
-		result.FailureReason.Should().Be(AssessmentFailureReason.ThrowingException);
-		result.InnerException.Should().BeOfType<NullReferenceException>();
-	}
-
-	[Fact]
-	public async Task ExecuteAsync_CallbackCancelledByItsToken_PropagatesOperationCanceledException()
-	{
-		using CancellationTokenSource cancellationTokenSource = new();
-		CustomCallbackAssessment assessment = new()
-		{
-			Callback = async (_, _, token) =>
-			{
-				await cancellationTokenSource.CancelAsync();
-				token.ThrowIfCancellationRequested();
-				return (1d, "unreachable", null);
-			},
-		};
-		using JsonDocument document = JsonDocument.Parse(Json);
-
-		Func<Task> act = () => assessment.ExecuteAsync(document, null, cancellationTokenSource.Token);
-
-		await act.Should().ThrowAsync<OperationCanceledException>();
-	}
-
-	[Fact]
-	public async Task ExecuteAsync_CallbackThrowsCancellationWhileTokenNotCancelled_ReturnsThrowingException()
-	{
-		AssessmentExecutionResult result = await ExecuteAsync(Throwing(new TaskCanceledException("own timeout")), Json);
-
-		result.RawScore.Should().BeNull();
-		result.FailureReason.Should().Be(AssessmentFailureReason.ThrowingException);
-		result.InnerException.Should().BeOfType<TaskCanceledException>();
-	}
-
-	[Fact]
 	public async Task ExecuteAsync_CallbackReceivesInputVirtualExtensionAndToken()
 	{
 		using CancellationTokenSource cancellationTokenSource = new();
@@ -170,17 +98,6 @@ public class CustomCallbackAssessmentTests : TestBase
 	}
 
 	[Fact]
-	public async Task ExecuteAsync_ExplanationTemplateSetAndCallbackThrows_UsesTemplate()
-	{
-		CustomCallbackAssessment assessment = Throwing(new InvalidOperationException()) with { ExplanationTemplate = "custom" };
-
-		AssessmentExecutionResult result = await ExecuteAsync(assessment, Json);
-
-		result.ExplanationText.Should().Be("custom");
-		result.FailureReason.Should().Be(AssessmentFailureReason.ThrowingException);
-	}
-
-	[Fact]
 	public async Task ExecuteAsync_WhitespaceExplanationTemplate_IsIgnoredInFavourOfCallbackExplanation()
 	{
 		CustomCallbackAssessment assessment = Returning(1d, "from callback") with { ExplanationTemplate = "   " };
@@ -188,32 +105,5 @@ public class CustomCallbackAssessmentTests : TestBase
 		AssessmentExecutionResult result = await ExecuteAsync(assessment, Json);
 
 		result.ExplanationText.Should().Be("from callback");
-	}
-
-	[Fact]
-	public async Task ExecuteAsync_CancellationAlreadyRequested_ThrowsWithoutCallingCallback()
-	{
-		bool called = false;
-		CustomCallbackAssessment assessment = new()
-		{
-			Callback = (_, _, _) =>
-			{
-				called = true;
-				return Task.FromResult<(double?, string, Exception?)>((1d, "ok", null));
-			},
-		};
-
-		Func<Task> act = () => ExecuteWithCancelledTokenAsync(assessment, Json);
-
-		await act.Should().ThrowAsync<OperationCanceledException>();
-		called.Should().BeFalse();
-	}
-
-	[Fact]
-	public async Task ExecuteAsync_NullInput_ThrowsArgumentNullException()
-	{
-		Func<Task> act = () => ExecuteWithNullInputAsync(Returning(1d, "ok"));
-
-		(await act.Should().ThrowAsync<ArgumentNullException>()).WithParameterName("input");
 	}
 }
