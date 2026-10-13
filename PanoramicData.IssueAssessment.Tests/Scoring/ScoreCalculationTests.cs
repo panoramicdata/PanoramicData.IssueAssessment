@@ -63,7 +63,7 @@ public class ScoreCalculationTests
 	[Fact]
 	public void CalculateCategoryRawRange_NullCategory_Throws()
 	{
-		Action act = () => ScoreCalculator.CalculateCategoryRawRange(null!);
+		Action act = () => ScoreCalculator.CalculateCategoryRawRange((AssessmentCategory)null!);
 
 		act.Should().Throw<ArgumentNullException>();
 	}

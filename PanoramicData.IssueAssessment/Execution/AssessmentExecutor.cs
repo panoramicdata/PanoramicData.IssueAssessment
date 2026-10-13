@@ -8,22 +8,42 @@ using PanoramicData.IssueAssessment.Scoring;
 internal static class AssessmentExecutor
 {
 	/// <summary>
-	/// Executes an assessment and returns normalized result artifacts.
+	/// Executes an assessment against <paramref name="input"/> with no rubric conditions.
 	/// </summary>
-	public static async Task<AssessmentExecutionItemResult> ExecuteAsync(
+	public static Task<AssessmentExecutionItemResult> ExecuteAsync(
 		string categoryName,
 		Assessment assessment,
 		JsonDocument input,
 		JsonDocument? virtualExtension,
 		CancellationToken cancellationToken)
 	{
+		ArgumentNullException.ThrowIfNull(input);
+		return ExecuteAsync(categoryName, assessment, new EvaluationContext(input), virtualExtension, cancellationToken);
+	}
+
+	/// <summary>
+	/// Executes an assessment and returns normalized result artifacts. An assessment whose
+	/// <see cref="Assessment.AppliesWhen"/> is false is not run and is reported as not applicable.
+	/// </summary>
+	public static async Task<AssessmentExecutionItemResult> ExecuteAsync(
+		string categoryName,
+		Assessment assessment,
+		EvaluationContext context,
+		JsonDocument? virtualExtension,
+		CancellationToken cancellationToken)
+	{
 		ArgumentNullException.ThrowIfNull(categoryName);
 		ArgumentNullException.ThrowIfNull(assessment);
+		ArgumentNullException.ThrowIfNull(context);
+
+		EvaluationContext scoped = context.WithVirtualExtension(virtualExtension);
+		AssessmentExecutionResult? executionResult = await RunAsync(assessment, scoped, cancellationToken).ConfigureAwait(false);
+		if (executionResult is null)
+		{
+			return NotApplicable(assessment);
+		}
 
 		(double minPossibleRaw, double maxPossibleRaw) = ScoreCalculator.CalculateAssessmentRawRange(assessment);
-		AssessmentExecutionResult executionResult = await RunAsync(assessment, input, virtualExtension, cancellationToken)
-			.ConfigureAwait(false);
-
 		double? normalizedScore = executionResult.RawScore.HasValue
 			? ScoreCalculator.Normalize(executionResult.RawScore.Value, minPossibleRaw, maxPossibleRaw)
 			: null;
@@ -40,6 +60,10 @@ internal static class AssessmentExecutor
 			ExplanationText: executionResult.ExplanationText ?? string.Empty,
 			FailureReason: executionResult.FailureReason,
 			InnerException: executionResult.InnerException);
+		if (assessmentResult.Outcome != AssessmentOutcome.Passed)
+		{
+			assessmentResult = assessmentResult with { Recommendation = executionResult.Recommendation ?? assessment.Recommendation };
+		}
 
 		AssessmentFailure? failure = executionResult.FailureReason is null
 			? null
@@ -56,18 +80,37 @@ internal static class AssessmentExecutor
 			VirtualDocument: executionResult.VirtualExtensionOutput);
 	}
 
+	private static AssessmentExecutionItemResult NotApplicable(Assessment assessment)
+		=> new(
+			AssessmentResult: new AssessmentResult(
+				AssessmentName: assessment.Name,
+				Score: new AssessmentScore(null, null, 0d, 0d),
+				ExplanationText: "Not applicable.",
+				FailureReason: null,
+				InnerException: null)
+			{
+				Outcome = AssessmentOutcome.NotApplicable,
+			},
+			Failure: null,
+			VirtualDocument: null);
+
 	/// <summary>
-	/// Runs the definition, turning a cancellation into a timeout result and any other exception into a failure result.
+	/// Checks applicability, then runs the definition, turning a cancellation into a timeout result and any other
+	/// exception into a failure result. Returns null when the assessment does not apply.
 	/// </summary>
-	private static async Task<AssessmentExecutionResult> RunAsync(
+	private static async Task<AssessmentExecutionResult?> RunAsync(
 		Assessment assessment,
-		JsonDocument input,
-		JsonDocument? virtualExtension,
+		EvaluationContext context,
 		CancellationToken cancellationToken)
 	{
 		try
 		{
-			return await ExecuteDefinitionAsync(assessment, input, virtualExtension, cancellationToken).ConfigureAwait(false);
+			if (assessment.AppliesWhen is { } appliesWhen && !appliesWhen.Evaluate(context))
+			{
+				return null;
+			}
+
+			return await ExecuteDefinitionAsync(assessment, context, cancellationToken).ConfigureAwait(false);
 		}
 		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
 		{
@@ -91,13 +134,12 @@ internal static class AssessmentExecutor
 
 	private static async Task<AssessmentExecutionResult> ExecuteDefinitionAsync(
 		Assessment assessment,
-		JsonDocument input,
-		JsonDocument? virtualExtension,
+		EvaluationContext context,
 		CancellationToken cancellationToken)
 	{
 		if (!assessment.AssessmentTimeout.HasValue)
 		{
-			return await assessment.Definition.ExecuteAsync(input, virtualExtension, cancellationToken).ConfigureAwait(false);
+			return await InvokeAsync(assessment.Definition, context, cancellationToken).ConfigureAwait(false);
 		}
 
 		using CancellationTokenSource timeoutCts = new(assessment.AssessmentTimeout.Value);
@@ -105,7 +147,7 @@ internal static class AssessmentExecutor
 
 		try
 		{
-			return await assessment.Definition.ExecuteAsync(input, virtualExtension, linkedCts.Token).ConfigureAwait(false);
+			return await InvokeAsync(assessment.Definition, context, linkedCts.Token).ConfigureAwait(false);
 		}
 		catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
 		{
@@ -117,4 +159,12 @@ internal static class AssessmentExecutor
 				VirtualExtensionOutput: null);
 		}
 	}
+
+	private static Task<AssessmentExecutionResult> InvokeAsync(
+		IAssessmentDefinition definition,
+		EvaluationContext context,
+		CancellationToken cancellationToken)
+		=> definition is IContextualAssessmentDefinition contextual
+			? contextual.ExecuteAsync(context, cancellationToken)
+			: definition.ExecuteAsync(context.Issue, context.VirtualExtension, cancellationToken);
 }

@@ -10,11 +10,11 @@ internal static class SeriesExecutor
 	/// </summary>
 	public static async Task<ExecutionResult> ExecuteAsync(
 		IAssessmentOptions options,
-		JsonDocument input,
+		EvaluationContext context,
 		CancellationToken cancellationToken)
 	{
 		ArgumentNullException.ThrowIfNull(options);
-		ArgumentNullException.ThrowIfNull(input);
+		ArgumentNullException.ThrowIfNull(context);
 
 		List<CategoryResult> categories = new(options.Categories.Count);
 		List<AssessmentFailure> failures = [];
@@ -24,7 +24,7 @@ internal static class SeriesExecutor
 		{
 			AssessmentCategory category = options.Categories[index];
 			(CategoryResult categoryResult, ImmutableList<AssessmentFailure> categoryFailures, JsonDocument? categoryVirtualDocument) =
-				await CategoryExecutor.ExecuteAsync(category, input, virtualDocument, options.FailureHandling, cancellationToken)
+				await CategoryExecutor.ExecuteAsync(category, context, virtualDocument, options.FailureHandling, cancellationToken)
 					.ConfigureAwait(false);
 
 			categories.Add(categoryResult);
