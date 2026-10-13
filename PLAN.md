@@ -1,817 +1,94 @@
 # PanoramicData.IssueAssessment — Implementation Plan
 
-**Version:** 1.0 (Pre-Implementation)  
-**Date:** May 12, 2026  
-**Status:** In Progress - Phase 1 Foundation Implemented  
-**Target Completion**: Staged delivery (Core → Assessments → Tests → Polish)
-
----
-
-## Project Overview
-
-This plan details the complete scaffold and implementation of `PanoramicData.IssueAssessment`, a high-quality open-source MIT-licensed library for schema-agnostic issue/ticket quality assessment.
-
-**Template:** Copy structure from `PanoramicData.NCalcExtensions`  
-**Repository Location:** `C:\Users\david\source\repos\panoramicdata\PanoramicData.IssueAssessment`
-
-## Current Progress Snapshot
-
-### Completed
-- Repository scaffold created locally with the intended solution layout, project folders, and namespace markers.
-- Central build files are in place: `Directory.Build.props`, `Directory.Packages.props`, `global.json`, `.editorconfig`, and `nuget.config`.
-- Documentation scaffold is present: `README.md`, `CONTRIBUTING.md`, `repository.instructions.md`, `DESIGN.md`, and this plan.
-- CI/CD scaffolding is present with test and publish workflows.
-- The solution file and all four project files are in place for the library, tests, docs, and examples projects.
-- The initial commit has already been created.
-- Package management mismatch was stabilized and `dotnet test` now restores/builds cleanly.
-- Phase 1.1-1.4 baseline implementation is complete (core interfaces, configuration records, result records, and `IssueAssessor` skeleton).
-- `IssueAssessor` construction-time validation is wired via `OptionsValidator` and covered by unit tests.
-
-### In Progress
-- Phase 1.5 validation scope is partially complete and currently focused on shared configuration rules.
-- Next implementation slice is Phase 2 assessment primitives (starting with Regex + Presence).
-
-### Blocked / Needs Verification
-- Regex pattern validation and JSONPath validation are not yet available until assessment definitions and JSONPath helper are introduced.
-- 100% coverage gate is not yet being measured in CI for newly-added public surface.
-
-### Handoff Notes
-- The plan is no longer a pre-work checklist; it is now a live implementation tracker.
-- Phase 1 foundation compiles and tests pass; continue by implementing Phase 2 assessment types and supporting utilities.
-- Preserve the existing architecture and keep changes incremental with tests per feature slice.
-
----
-
-## Phase 0: Repository Initialization (Immediate)
-
-### 0.1 Create GitHub Repository
-- [ ] Create public GitHub repo: `panoramicdata/PanoramicData.IssueAssessment`
-- [ ] Set MIT license in GitHub UI
-- [ ] Enable branch protection: `main` branch requires PR review
-- [ ] Clone to local: `C:\Users\david\source\repos\panoramicdata\PanoramicData.IssueAssessment`
-
-### 0.2 Copy & Adapt NCalcExtensions Template
-- [ ] Copy folder structure from `PanoramicData.NCalcExtensions`:
-  ```
-  PanoramicData.IssueAssessment/
-  ├── .github/
-  │   ├── workflows/          (CI/CD: dotnet test, nuget publish, etc.)
-  │   └── instructions/
-  ├── Directory.Build.props   (Centralized build properties)
-  ├── Directory.Packages.props (Centralized package versions)
-  ├── global.json             (.NET 10.0)
-  ├── .editorconfig
-  ├── .gitignore
-  ├── nuget.config
-  ├── README.md
-  ├── LICENSE (MIT)
-  ├── DESIGN.md               (Our design doc)
-  └── src/
-      ├── PanoramicData.IssueAssessment/         (Main library)
-      ├── PanoramicData.IssueAssessment.Tests/   (XUnit3 tests)
-      ├── PanoramicData.IssueAssessment.Docs/    (Documentation project)
-      └── PanoramicData.IssueAssessment.Examples/ (Optional: example implementations)
-  ```
-
-- [ ] Update all `.csproj` files:
-  - Target framework: `net10.0`
-  - Enable nullable reference types: `<Nullable>enable</Nullable>`
-  - Set `<ImplicitUsings>enable</ImplicitUsings>`
-  - Set `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`
-
-### 0.3 Package & Dependency Setup
-- [ ] Create `Directory.Packages.props` with centralized versions:
-  ```xml
-  <ItemGroup>
-    <PackageVersion Include="System.Text.Json" Version="10.0.0" />
-    <PackageVersion Include="System.Collections.Immutable" Version="10.0.0" />
-    <PackageVersion Include="PanoramicData.NCalcExtensions" Version="1.0.0" />
-    <!-- XUnit3 & Testing -->
-    <PackageVersion Include="xunit" Version="2.8.1" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.1" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.1" />
-    <PackageVersion Include="AwesomeAssertions" Version="1.12.0" />
-  </ItemGroup>
-  ```
-
-- [ ] Create `.editorconfig` (copy from NCalcExtensions, enforce tabs, line length 120)
-- [ ] Set up `nuget.config` for any internal package sources (if needed)
-
-### 0.4 CI/CD Workflows
-- [ ] Create `.github/workflows/test.yml`:
-  - Runs `dotnet test` on push & PR
-  - Collects code coverage (target: 100%)
-  - Fails if coverage < 100%
-  - Runs on multiple TFMs (net10.0)
-
-- [ ] Create `.github/workflows/publish.yml`:
-  - Triggered on tag push (v*.*.*)
-  - Runs tests
-  - Builds NuGet package
-  - Publishes to nuget.org (with API key in GitHub Secrets)
-
-### 0.5 Documentation Skeleton
-- [ ] Create `README.md` with:
-  - Project description & use cases
-  - Quick start example
-  - Core concepts overview
-  - Link to DESIGN.md for deep dive
-  - Link to API docs (XML docs)
-  - Contributing guidelines
-  - License notice
-
-- [ ] Create `CONTRIBUTING.md`:
-  - Development setup instructions
-  - Code style & conventions
-  - Test requirements (100% coverage)
-  - PR process
-  - Semver policy (strict from v1.0.0)
-
----
-
-## Phase 1: Core Library Structure (Days 1–2)
-
-### 1.1 Create Base Interfaces & Types
-
-**File:** `src/PanoramicData.IssueAssessment/Core/Interfaces.cs`
-
-```csharp
-namespace PanoramicData.IssueAssessment.Core;
-
-using System.Collections.Immutable;
-using System.Text.Json;
-
-// Top-level interface for options
-public interface IAssessmentOptions
-{
-    ImmutableList<AssessmentCategory> Categories { get; }
-    CategoryExecutionStrategy ExecutionStrategy { get; }
-    TimeSpan? GlobalTimeout { get; }
-    FailureHandlingStrategy FailureHandling { get; }
-    bool CaptureVirtualDocument { get; }
-}
-
-// Assessment definition interface
-public interface IAssessmentDefinition
-{
-    Task<AssessmentExecutionResult> ExecuteAsync(
-        JsonDocument input,
-        JsonDocument? virtualExtension,
-        CancellationToken cancellationToken);
-}
-
-// Series gate interface
-public interface ISeriesGateCondition
-{
-    Task<bool> ShouldExecuteNextAsync(
-        CategoryResult priorCategoryResult,
-        ImmutableList<AssessmentFailure> priorFailures,
-        CancellationToken cancellationToken);
-}
-
-// Cache provider interface
-public interface IAssessmentCacheProvider
-{
-    Task<IAssessmentResult?> GetAsync(
-        JsonDocument issue,
-        IAssessmentOptions options,
-        CancellationToken cancellationToken);
-
-    Task<bool> SetAsync(
-        JsonDocument issue,
-        IAssessmentOptions options,
-        IAssessmentResult result,
-        CancellationToken cancellationToken);
-
-    Task ClearAsync(CancellationToken cancellationToken);
-}
-
-// Result interface
-public interface IAssessmentResult
-{
-    ImmutableList<CategoryResult> Categories { get; }
-    ImmutableList<AssessmentFailure> Failures { get; }
-    AssessmentAggregations Aggregations { get; }
-    JsonDocument? VirtualDocument { get; }
-}
-
-// Enums
-public enum CategoryExecutionStrategy
-{
-    Parallel,
-    Series
-}
-
-public enum AssessmentExecutionStrategy
-{
-    Parallel,
-    Series
-}
-
-public enum FailureHandlingStrategy
-{
-    FailFast,
-    CollectAll
-}
-
-public enum AssessmentFailureReason
-{
-    JsonPathNotFound,
-    InvalidRegex,
-    InvalidJsonPath,
-    TimeoutExceeded,
-    ThrowingException,
-    VirtualExtensionAttemptedInParallel,
-    ConfigurationError
-}
-```
-
-- [x] Implement all record types as immutable (C# 10 records with `init` properties)
-
-### 1.2 Create Configuration Records
-
-**File:** `src/PanoramicData.IssueAssessment/Configuration/AssessmentOptions.cs`
-
-- [x] `AssessmentOptions` (top-level, record)
-- [x] `AssessmentCategory` (per-category, record)
-- [x] `Assessment` (per-assessment, record)
-- [x] All with full XML documentation
-
-### 1.3 Create Result Records
-
-**File:** `src/PanoramicData.IssueAssessment/Results/AssessmentResult.cs`
-
-- [x] `AssessmentResult`
-- [x] `CategoryResult`
-- [x] `AssessmentScore` (raw + normalized)
-- [x] `AssessmentExecutionResult`
-- [x] `AssessmentFailure`
-- [x] `AssessmentAggregations`
-- [x] `AggregationMetrics`, `PercentileMetrics`, `WeightedAggregationMetrics`
-
-### 1.4 Create Main Assessor Class Skeleton
-
-**File:** `src/PanoramicData.IssueAssessment/IssueAssessor.cs`
-
-```csharp
-public class IssueAssessor
-{
-    private readonly IAssessmentOptions _options;
-    private readonly IAssessmentCacheProvider? _cache;
-
-    public IssueAssessor(
-        IAssessmentOptions options,
-        IAssessmentCacheProvider? cacheProvider = null)
-    {
-        ValidateOptions(options);
-        _options = options;
-        _cache = cacheProvider;
-    }
-
-    public async Task<IAssessmentResult> AssessAsync(
-        JsonDocument issue,
-        CancellationToken cancellationToken = default)
-    {
-        // TODO: Full implementation in Phase 2
-    }
-
-    public async IAsyncEnumerable<IAssessmentResult> AssessManyAsync(
-        IAsyncEnumerable<JsonDocument> issues,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        // TODO: Batch assessment with optional parallelism
-    }
-
-    private void ValidateOptions(IAssessmentOptions options)
-    {
-        // TODO: Validation in Phase 1.5
-    }
-}
-```
-
-- [x] Implement constructor with options validation and dependency capture
-- [x] Add `AssessAsync` and `AssessManyAsync` method scaffolding with cancellation support
-
-### 1.5 Validation Engine
-
-**File:** `src/PanoramicData.IssueAssessment/Validation/OptionsValidator.cs`
-
-- [ ] Validate regex patterns (compile & throw if invalid)
-- [x] Validate JSONPath expressions (parse & throw if malformed)
-- [x] Validate weight ranges [-100, 100]
-- [x] Validate timeout values (positive)
-- [x] Validate virtual extension config (fail if parallel + attempted extension)
-- [x] Provide clear error messages for construction-time failures
-
----
-
-## Phase 2: Assessment Types (Days 3–5)
-
-### 2.1 Base Assessment Type Library
-
-**Directory:** `src/PanoramicData.IssueAssessment/Assessments/`
-
-Create 10 assessment types, each in its own file:
-
-- [x] **RegexAssessment.cs**: Pattern matching
-  ```csharp
-  public record RegexAssessment : IAssessmentDefinition
-  {
-      public required string JsonPath { get; init; }
-      public required string Pattern { get; init; }
-      public required double SuccessScore { get; init; }
-      public required double FailureScore { get; init; }
-      public string? ExplanationTemplate { get; init; }
-
-      public async Task<AssessmentExecutionResult> ExecuteAsync(...)
-      {
-          // Implementation
-      }
-  }
-  ```
-
-- [x] **PresenceAssessment.cs**: Field presence
-- [x] **StringLengthAssessment.cs**: Text length range
-- [x] **WordCountAssessment.cs**: Word count range
-- [x] **NumericRangeAssessment.cs**: Numeric value range
-- [x] **DateRangeAssessment.cs**: Date range validation
-- [x] **EnumAssessment.cs**: Value in whitelist
-- [x] **PatternCountAssessment.cs**: Pattern occurrence counting
-- [x] **JsonPathSelectorAssessment.cs**: Custom logic on JsonPath result
-- [x] **CustomCallbackAssessment.cs**: Arbitrary async callback
-
-### 2.2 JSONPath Helper
-
-**File:** `src/PanoramicData.IssueAssessment/Utilities/JsonPathHelper.cs`
-
-- [x] Parse JSONPath expressions using `System.Text.Json` (no external libraries)
-- [x] Navigate JsonDocument/JsonNode
-- [x] Return selected values or null if path not found
-- [x] Throw `InvalidJsonPathException` for malformed paths
-
-### 2.3 Regex Compiler Cache
-
-**File:** `src/PanoramicData.IssueAssessment/Utilities/RegexCache.cs`
-
-- [x] Thread-safe cache of compiled regex patterns
-- [x] Validate on first access, throw if invalid
-- [x] Cache hit for repeated patterns
-
-### 2.4 Score Calculation Engine
-
-**File:** `src/PanoramicData.IssueAssessment/Scoring/ScoreCalculator.cs`
-
-- [x] Calculate `MinPossibleRaw` & `MaxPossibleRaw` for category/assessments
-- [x] Normalize score: `(raw - min) / (max - min)`
-- [x] Handle edge case: if min == max, return normalized score = 1.0 (or 0.5?)
-- [x] Support weighted aggregation (simple & exponential)
-
-### 2.5 Built-in Base Categories
-
-**Directory:** `src/PanoramicData.IssueAssessment/BaseCategories/`
-
-Create 7 category definitions (as static factories returning `AssessmentCategory`):
-
-- [x] `TitleQualityCategory.cs`
-- [x] `DescriptionQualityCategory.cs`
-- [x] `AcceptanceCriteriaCategory.cs`
-- [x] `AssigneeOwnershipCategory.cs`
-- [x] `DueDateTimelineCategory.cs`
-- [x] `ReproducibilityCategory.cs`
-- [x] `AiSuitabilityCategory.cs`
-
-Each returns fully configured `AssessmentCategory` with assessments, weights, documentation.
-
----
-
-## Phase 3: Execution Engine (Days 6–7)
-
-### 3.1 Category Executor
-
-**File:** `src/PanoramicData.IssueAssessment/Execution/CategoryExecutor.cs`
-
-- [ ] Execute single category (parallel vs. series assessments)
-- [ ] Handle virtual object extension chaining (series only)
-- [ ] Manage timeouts per category
-- [ ] Aggregate assessment results into category score
-- [ ] Return `CategoryResult`
-- [x] Execute single category (parallel vs. series assessments)
-- [x] Handle virtual object extension chaining (series only)
-- [x] Manage timeouts per category
-- [x] Aggregate assessment results into category score
-- [x] Return `CategoryResult`
-
-### 3.2 Assessment Executor
-
-**File:** `src/PanoramicData.IssueAssessment/Execution/AssessmentExecutor.cs`
-
-- [ ] Execute single assessment
-- [ ] Handle failures (null score + reason)
-- [ ] Manage assessment-level timeout
-- [ ] Capture explanation text & virtual extension output
-- [ ] Return `AssessmentExecutionResult`
-- [x] Execute single assessment
-- [x] Handle failures (null score + reason)
-- [x] Manage assessment-level timeout
-- [x] Capture explanation text & virtual extension output
-- [x] Return `AssessmentExecutionResult`
-
-### 3.3 Series Executor
-
-**File:** `src/PanoramicData.IssueAssessment/Execution/SeriesExecutor.cs`
-
-- [ ] Execute categories in series (one after another)
-- [ ] Pass virtual extension from prior category to next
-- [ ] Evaluate gate conditions before each category
-- [ ] Short-circuit if gate returns false
-- [ ] Collect failures throughout
-- [x] Execute categories in series (one after another)
-- [x] Pass virtual extension from prior category to next
-- [x] Evaluate gate conditions before each category
-- [x] Short-circuit if gate returns false
-- [x] Collect failures throughout
-
-### 3.4 Parallel Executor
-
-**File:** `src/PanoramicData.IssueAssessment/Execution/ParallelExecutor.cs`
-
-- [ ] Execute categories in parallel using `Task.WhenAll`
-- [ ] Validate no virtual extensions in parallel (fail-fast)
-- [ ] Manage global timeout
-- [ ] Collect failures from all parallel tasks
-- [x] Execute categories in parallel using `Task.WhenAll`
-- [x] Validate no virtual extensions in parallel (fail-fast)
-- [x] Manage global timeout
-- [x] Collect failures from all parallel tasks
-
-### 3.5 Main Assessment Flow
-
-**File:** `src/PanoramicData.IssueAssessment/IssueAssessor.cs` (continuation)
-
-- [ ] Implement `AssessAsync(JsonDocument, CancellationToken)`
-- [ ] Check cache first
-- [ ] Choose executor (series or parallel)
-- [ ] Run executor
-- [ ] Calculate aggregations
-- [ ] Optionally capture virtual document
-- [ ] Cache result
-- [ ] Return `IAssessmentResult`
-- [x] Implement `AssessAsync(JsonDocument, CancellationToken)`
-- [x] Check cache first
-- [x] Choose executor (series or parallel)
-- [x] Run executor
-- [x] Calculate aggregations
-- [x] Optionally capture virtual document
-- [x] Cache result
-- [x] Return `IAssessmentResult`
-
----
-
-## Phase 4: Aggregation Engine (Day 8)
-
-### 4.1 Aggregation Calculator
-
-**File:** `src/PanoramicData.IssueAssessment/Aggregation/AggregationCalculator.cs`
-
-- [ ] Calculate percentiles (0, 5, 10, 25, 50, 75, 90, 95, 100)
-- [ ] Calculate sum, sum of squares, count
-- [ ] Calculate weighted mean (simple: `Σ(score × weight) / Σ(weight)`)
-- [ ] Calculate exponential weighted mean: `Σ(score^weight) / Σ(1)` or similar
-- [ ] Normalize weighted means
-- [ ] Handle null scores gracefully (skip or return null aggregation)
-
-### 4.2 Virtual Document Finalizer
-
-**File:** `src/PanoramicData.IssueAssessment/Execution/VirtualDocumentFinalizer.cs`
-
-- [ ] Combine virtual extensions from all assessments/categories
-- [ ] Build final `JsonDocument` with all extensions
-- [ ] Ensure no conflicts (assessment A and B both output to same path? → fail or merge?)
-- [x] Combine virtual extensions from all assessments/categories
-- [x] Build final `JsonDocument` with all extensions
-- [x] Ensure no conflicts (assessment A and B both output to same path? → fail or merge?)
-
----
-
-## Phase 5: Caching (Day 9)
-
-### 5.1 Built-in In-Memory Cache
-
-**File:** `src/PanoramicData.IssueAssessment/Caching/InMemoryAssessmentCache.cs`
-
-```csharp
-public class InMemoryAssessmentCache : IAssessmentCacheProvider
-{
-    private readonly ConcurrentDictionary<string, (IAssessmentResult, DateTime)> _cache;
-    private readonly int _maxEntries;
-    private readonly TimeSpan? _ttl;
-
-    public InMemoryAssessmentCache(int maxEntries = 1000, TimeSpan? ttl = null)
-    {
-        _cache = new();
-        _maxEntries = maxEntries;
-        _ttl = ttl;
-    }
-
-    public async Task<IAssessmentResult?> GetAsync(...)
-    {
-        // Look up cache key; check TTL; return or evict
-    }
-
-    public async Task<bool> SetAsync(...)
-    {
-        // Add to cache; evict LRU if full
-    }
-
-    public async Task ClearAsync(...)
-    {
-        // Clear all entries
-    }
-}
-```
-
-- [ ] Use `ConcurrentDictionary` for thread safety
-- [ ] Cache key: hash of (JsonDocument content, options definition)
-- [ ] Implement LRU eviction when max entries reached
-- [ ] Support optional TTL (default: no TTL)
-- [x] Use `ConcurrentDictionary` for thread safety
-- [x] Cache key: hash of (JsonDocument content, options definition)
-- [x] Implement LRU eviction when max entries reached
-- [x] Support optional TTL (default: no TTL)
-
-### 5.2 Cache Key Generation
-
-**File:** `src/PanoramicData.IssueAssessment/Caching/CacheKeyGenerator.cs`
-
-- [ ] Generate stable hash from JsonDocument (content-based)
-- [ ] Generate stable hash from IAssessmentOptions (definition-based)
-- [ ] Combine into cache key
-- [x] Generate stable hash from JsonDocument (content-based)
-- [x] Generate stable hash from IAssessmentOptions (definition-based)
-- [x] Combine into cache key
-
----
-
-## Phase 6: Test Suite (Days 10–15)
-
-### 6.1 Test Project Setup
-
-**File:** `src/PanoramicData.IssueAssessment.Tests/PanoramicData.IssueAssessment.Tests.csproj`
-
-- [ ] Reference XUnit3, AwesomeAssertions, Microsoft.NET.Test.Sdk
-- [ ] No FluentAssertions (use AwesomeAssertions exclusively)
-- [ ] Enable code coverage analysis
-
-### 6.2 Unit Tests by Assessment Type
-
-**Directory:** `src/PanoramicData.IssueAssessment.Tests/Assessments/`
-
-For each assessment type, create comprehensive tests:
-
-- [ ] `RegexAssessmentTests.cs` (> 10 test cases)
-  - Valid regex, match, no match, invalid regex, null input, timeout, etc.
-
-- [ ] `PresenceAssessmentTests.cs` (> 10 test cases)
-  - Field present, field missing, null value, empty string, etc.
-
-- [ ] `StringLengthAssessmentTests.cs` (> 10 test cases)
-  - Within range, below min, above max, null input, etc.
-
-- [ ] Similar for all 10 types
-
-### 6.3 Integration Tests
-
-**Directory:** `src/PanoramicData.IssueAssessment.Tests/Integration/`
-
-- [ ] `CategoryExecutionTests.cs`
-  - Single category execution, parallel assessments, series assessments, aggregation
-  
-- [ ] `SeriesExecutionTests.cs`
-  - Multiple categories in series, virtual extension chaining, gate conditions
-
-- [ ] `ParallelExecutionTests.cs`
-  - Multiple categories in parallel, no virtual extension sharing
-
-- [ ] `TimeoutTests.cs`
-  - Per-assessment timeout, category timeout, global timeout, cancellation token
-
-- [ ] `FailureHandlingTests.cs`
-  - FailFast vs. CollectAll strategies
-
-- [ ] `CachingTests.cs`
-  - Cache hit, cache miss, TTL expiry, eviction
-
-### 6.4 Base Category Tests
-
-**Directory:** `src/PanoramicData.IssueAssessment.Tests/BaseCategories/`
-
-- [ ] `TitleQualityCategoryTests.cs` (mock Jira/GitHub issues)
-- [ ] `DescriptionQualityCategoryTests.cs`
-- [ ] Similar for all 7 categories
-
-### 6.5 Validation & Error Handling Tests
-
-**Directory:** `src/PanoramicData.IssueAssessment.Tests/Validation/`
-
-- [ ] `OptionsValidationTests.cs`
-  - Invalid regex patterns, invalid JSONPath, invalid weights, timeout values
-
-- [ ] `ConstructionErrorTests.cs`
-  - Virtual extension in parallel mode, configuration conflicts
-
-### 6.6 Scoring & Normalization Tests
-
-**Directory:** `src/PanoramicData.IssueAssessment.Tests/Scoring/`
-
-- [ ] `ScoreCalculationTests.cs`
-  - Weighted average, percentiles, normalization, negative scores
-
-- [ ] `AggregationTests.cs`
-  - Calculate all aggregation types, null handling
-
-### 6.7 Test Fixtures & Helpers
-
-**File:** `src/PanoramicData.IssueAssessment.Tests/Fixtures/`
-
-- [ ] `SampleIssuesFixture.cs` → Mock Jira, GitHub, ServiceNow documents
-- [ ] `AssessmentBuilderFixture.cs` → Factory for creating test assessments
-- [ ] `OptionsBuilderFixture.cs` → Factory for creating test options
-
-### 6.8 Code Coverage Verification
-
-- [ ] Run `dotnet test` with code coverage collection
-- [ ] Target: **100% coverage** (all lines, all branches)
-- [ ] Use OpenCover or similar
-- [ ] Fail build if coverage < 100%
-
----
-
-## Phase 7: Documentation & Polish (Days 16–18)
-
-### 7.1 XML Documentation
-
-- [ ] Add comprehensive XML docs to all public types & members
-- [ ] Follow PanoramicData style guide (clear, concise, 1–3 sentences for explanations)
-- [ ] Include `<param>`, `<returns>`, `<exception>`, `<remarks>` tags
-
-### 7.2 README.md Completion
-
-- [ ] Quick start example
-- [ ] Concepts overview (categories, assessments, scoring)
-- [ ] Platform-agnostic JSON mapping examples (Jira, GitHub)
-- [ ] Link to DESIGN.md
-- [ ] Contributing guidelines
-
-### 7.3 API Documentation Site (Optional)
-
-- [ ] Generate from XML docs using DocFX
-- [ ] Deploy to GitHub Pages
-
-### 7.4 Code Quality Checks
-
-- [ ] Run `dotnet build` with all warnings as errors
-- [ ] Run `dotnet test` with 100% coverage gate
-- [ ] Run code analyzer (StyleCop, etc.) via Roslyn
-- [ ] Ensure all warnings resolved
-
-### 7.5 Example Implementation
-
-**Directory:** `src/PanoramicData.IssueAssessment.Examples/`
-
-- [ ] `JiraIssueAssessmentExample.cs` → Real Jira JSON fixture
-- [ ] `GitHubIssueAssessmentExample.cs` → Real GitHub issue JSON fixture
-- [ ] `ServiceNowTicketAssessmentExample.cs` → ServiceNow ticket JSON fixture
-
-Each example:
-- Loads sample ticket JSON
-- Creates `IssueAssessor` with base categories
-- Runs assessment
-- Prints formatted results
-
-### 7.6 Release Notes
-
-- [ ] Create `CHANGELOG.md` with v1.0.0 entry
-- [ ] Highlight key features, architecture decisions, breaking changes (none at v1.0)
-
----
-
-## Phase 8: GitHub & NuGet Publishing (Day 19)
-
-### 8.1 Create GitHub Release
-
-- [ ] Tag: `v1.0.0`
-- [ ] Release notes: Copy from CHANGELOG
-- [ ] Attach example files
-
-### 8.2 Publish NuGet Package
-
-- [ ] Run `dotnet pack` → produces `.nupkg`
-- [ ] Publish to nuget.org (or internal feed)
-- [ ] Verify package on NuGet.org
-
-### 8.3 Update PanoramicData Docs
-
-- [ ] Update consuming repo list (if applicable)
-- [ ] Register in NuGetManagement assessment tool
-
----
-
-## Phase 9: Sync to Consuming Repos (Day 20)
-
-### 9.1 Update PanoramicData.Skills (if applicable)
-
-- [ ] Add `IssueAssessment.Skill.md` if a skill is to be created
-- [ ] Sync to consuming repositories via `Sync-Skills.ps1`
-
-### 9.2 Initial PR to PanoramicData.Operations (Optional)
-
-- [ ] If OPS Dashboard will use it, create PR to add as dependency
-- [ ] Integration testing with real Jira tickets
-
----
-
-## Milestone Checklist
-
-- [ ] **Phase 0 Complete**: Repo initialized, template copied, CI/CD configured
-- [ ] **Phase 1 Complete**: Core interfaces, types, validators in place
-- [ ] **Phase 2 Complete**: All 10 assessment types + 7 base categories
-- [ ] **Phase 3 Complete**: Execution engines (series, parallel, assessment)
-- [ ] **Phase 4 Complete**: Aggregation & normalization engine
-- [ ] **Phase 5 Complete**: Caching layer
-- [ ] **Phase 6 Complete**: Full test suite (100% coverage)
-- [ ] **Phase 7 Complete**: Documentation & examples
-- [ ] **Phase 8 Complete**: Published to NuGet
-- [ ] **Phase 9 Complete**: Integrated with consuming repos (if applicable)
-
----
-
-## Risk Mitigation
-
-| Risk | Mitigation |
-|------|-----------|
-| JSONPath .NET implementation complexity | Use simple recursive descent; test thoroughly; document limitations |
-| Virtual object mutation conflicts | Validate at construction time; fail-fast for parallel + extension |
-| Timeout management complexity | Create helper utilities; test all timeout scenarios |
-| Score normalization edge cases | Test with negative, zero, extreme weights; document formulas |
-| 100% code coverage target difficult | Write tests first (TDD); refactor unreachable code early |
-
----
-
-## Design Review Gates
-
-Before proceeding to next phase:
-
-1. **Phase 1 → Phase 2**: Interfaces & types locked; validation engine working
-2. **Phase 2 → Phase 3**: All 10 assessment types + 7 categories implemented & tested
-3. **Phase 3 → Phase 4**: Execution engine working (parallel & series)
-4. **Phase 6 → Phase 7**: 100% code coverage achieved
-5. **Phase 8 → Phase 9**: NuGet package published & verified on nuget.org
-
----
-
-## Success Criteria
-
-✅ **Functional**
-- All 10 assessment types working
-- All 7 base categories functional
-- Series & parallel execution modes work
-- Virtual object extension chaining works
-- Gate conditions work
-- Timeouts & cancellation work
-
-✅ **Quality**
-- 100% code coverage (no unreachable code)
-- All warnings as errors
-- Zero StyleCop violations
-- XML docs complete
-- Tests comprehensive (> 100 test cases)
-
-✅ **Documentation**
-- DESIGN.md complete
-- README.md complete
-- API docs generated
-- Examples functional
-
-✅ **Open Source**
-- MIT license
-- Published to nuget.org
-- CI/CD working (public repo)
-- Contributing guidelines clear
-
-✅ **Production-Ready**
-- Semantic versioning (strict from v1.0.0)
-- Performance baseline established
-- Error handling comprehensive
-- Caching optional but available
-
----
-
-## What Next
-
-1. Confirm the package management strategy is consistent across the repository, then run a clean `dotnet restore` followed by `dotnet build -c Release`.
-2. If restore/build succeeds, start Phase 1 by implementing the immutable configuration and result records plus the validation surface described in the design.
-3. Add focused tests alongside the first real types so the eventual coverage target stays realistic and measurable.
-4. Keep the next handover centered on the current build state, any restore/build errors, and the first Phase 1 files touched so another session can continue without rediscovery.
-
-**Document Status**: Ready for scaffold phase. Next: Initialize GitHub repo & begin Phase 0.
-
+**Status:** Phases 0–7 complete; Phase 8 (publishing) waits on repository creation and nuget.org trusted publishing.
+**Updated:** 2026-10-13
+
+The design is in [DESIGN.md](DESIGN.md). This file tracks what has been done and what is left.
+
+## Milestones
+
+| Phase | Scope | Status |
+|---|---|---|
+| 0 | Repository, build, CI/CD, governance files | ✅ Local. GitHub repository not yet created (see Phase 8) |
+| 1 | Core interfaces, configuration and result records, construction-time validation | ✅ |
+| 2 | Ten assessment types, JSONPath helper, regex cache, scoring, seven base categories | ✅ |
+| 3 | Execution engine: assessment, category, series and parallel executors | ✅ |
+| 4 | Aggregation and virtual document finalizer | ✅ |
+| 5 | Caching: in-memory cache and cache keys | ✅ |
+| 6 | Test suite | ✅ 600 tests; 100% line coverage, 99.8% branch coverage |
+| 7 | Documentation, examples, calibration, release notes | ✅ |
+| 8 | GitHub repository, Codacy, NuGet publishing | ⏳ Blocked: needs the repository created and trusted publishing configured |
+| 9 | Consuming repositories | ⏳ Optional; after publishing |
+
+## Phase 0: Repository
+
+- [x] Solution layout: library, tests, examples (`PanoramicData.IssueAssessment.slnx`, with Solution Items)
+- [x] `Directory.Build.props` (warnings as errors, nullable, XML docs, `latest-recommended` analyzers, code style
+      enforced), central package management, `global.json` with the Microsoft Testing Platform runner
+- [x] Nerdbank.GitVersioning (`version.json`, version line 1.0) and `Publish.ps1`
+- [x] `ci.yml`: build, test with coverage, Codacy upload, pack, and trusted-publishing release on version tags
+- [x] `codeql.yml`, `dependabot.yml`
+- [x] SECURITY.md, CONTRIBUTING.md, CLAUDE.md, AGENTS.md and copilot-instructions.md from the NugetManagement
+      standards; `.codacy.yml`, `.gitattributes`, `coverage.config`
+- [x] Original package icon
+- [ ] Create the public GitHub repository and push
+- [ ] Remove superseded files: `.github/workflows/test.yml`, `.github/workflows/publish.yml`,
+      `.github/instructions/repository.instructions.md`, `.vscode/`, the empty `PanoramicData.IssueAssessment.Docs/`
+      project (already removed from the solution)
+
+## Phases 1–5: Library
+
+- [x] Immutable `AssessmentOptions`, `AssessmentCategory`, `Assessment`; result records
+- [x] `OptionsValidator`: every rule in DESIGN.md, including regex and JSONPath compilation, duplicate category and
+      virtual output names
+- [x] Ten assessment types; JSONPath subset; regex cache with a match timeout
+- [x] Score ranges, normalization, negative weights, weighted and exponential averages
+- [x] Seven base categories, calibrated against real issues
+- [x] Series and parallel execution; gates (`ScoreThresholdGate`, `NoFailuresGate` built in); FailFast and
+      CollectAll at options and category level; assessment, category and global timeouts; caller cancellation
+- [x] Virtual extensions stored under `VirtualOutputName` and readable by built-in assessments
+- [x] Aggregations: count, minimum, maximum, average, standard deviation, percentiles, weighted average
+- [x] `InMemoryAssessmentCache` (LRU, TTL, `TimeProvider`); culture-invariant cache keys; per-instance keys for
+      delegates, gates and custom definitions
+
+## Phase 6: Tests
+
+- [x] xUnit v3 with AwesomeAssertions on the Microsoft Testing Platform; `failSkips`
+- [x] Tests per assessment type, JSONPath and regex utilities
+- [x] Integration tests: category execution, series, parallel, timeouts, failure handling, virtual documents,
+      assessor entry points
+- [x] Base category tests, including good, mediocre and poor sample tickets and raw platform shapes
+- [x] Validation tests for every rejection
+- [x] Scoring, aggregation and caching tests
+- [x] Coverage measured with `coverage.config`: 100% of lines. The one unmeasured branch is the compiler-generated
+      enumerator null check of `await foreach` in `AssessManyAsync`; replacing the loop by hand adds more such branches.
+- [x] Suite run repeatedly to rule out timing flakiness
+
+## Phase 7: Documentation and polish
+
+- [x] XML documentation on every public member (CS1591 no longer suppressed)
+- [x] README rewritten against the real API; code samples compiled and run
+- [x] DESIGN.md updated to the implemented design, with calibration results and deliberate differences
+- [x] Examples: Jira, GitHub and ServiceNow, each with a mapper to the normalized ticket shape
+- [x] CHANGELOG.md
+- [x] Performance baseline: median 0.22 ms, p99 0.95 ms per ticket with all seven categories (75 real issues ×40)
+- [ ] API documentation site (DocFX): optional, not started
+
+## Phase 8: Publishing
+
+Needs, in order:
+
+1. [ ] Create the repository: `gh repo create panoramicdata/PanoramicData.IssueAssessment --public --source . --push`
+2. [ ] Enable private vulnerability reporting:
+       `gh api -X PUT repos/panoramicdata/PanoramicData.IssueAssessment/private-vulnerability-reporting`
+3. [ ] Add the repository to Codacy and set the `CODACY_PROJECT_TOKEN` secret (codacy skill: `add-repo`, then
+       `create-repo-token --set-github-secret`)
+4. [ ] Check CI and CodeQL are green
+5. [ ] On nuget.org, add a trusted publishing policy: GitHub Actions, owner `panoramicdata`, repository
+       `PanoramicData.IssueAssessment`, workflow `ci.yml`, no environment
+6. [ ] Run the NugetManagement governance assessment and fix what it reports
+7. [ ] `./Publish.ps1` on a clean, synced `main`; confirm the version on nuget.org
+
+## Phase 9: Consumers (optional)
+
+- [ ] Decide whether a PanoramicData.Skills skill or a consuming dashboard should use the package
