@@ -11,13 +11,16 @@ public class InMemoryAssessmentCache : IAssessmentCacheProvider
 	private readonly object _sync = new();
 	private readonly int _maxEntries;
 	private readonly TimeSpan? _ttl;
+	private readonly TimeProvider _timeProvider;
 
 	/// <summary>
 	/// Initializes a new cache instance.
 	/// </summary>
 	/// <param name="maxEntries">Maximum number of entries before LRU eviction.</param>
 	/// <param name="ttl">Optional time-to-live for each entry.</param>
-	public InMemoryAssessmentCache(int maxEntries = 1000, TimeSpan? ttl = null)
+	/// <param name="timeProvider">Clock used for expiry and recency; defaults to <see cref="TimeProvider.System"/>.</param>
+	/// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maxEntries"/> or <paramref name="ttl"/> is not positive.</exception>
+	public InMemoryAssessmentCache(int maxEntries = 1000, TimeSpan? ttl = null, TimeProvider? timeProvider = null)
 	{
 		if (maxEntries <= 0)
 		{
@@ -31,6 +34,7 @@ public class InMemoryAssessmentCache : IAssessmentCacheProvider
 
 		_maxEntries = maxEntries;
 		_ttl = ttl;
+		_timeProvider = timeProvider ?? TimeProvider.System;
 	}
 
 	/// <inheritdoc />
@@ -50,7 +54,7 @@ public class InMemoryAssessmentCache : IAssessmentCacheProvider
 			return Task.FromResult<IAssessmentResult?>(null);
 		}
 
-		entry.LastAccessUtc = DateTime.UtcNow;
+		entry.LastAccessUtc = _timeProvider.GetUtcNow().UtcDateTime;
 		return Task.FromResult<IAssessmentResult?>(entry.Result);
 	}
 
@@ -62,7 +66,7 @@ public class InMemoryAssessmentCache : IAssessmentCacheProvider
 
 		lock (_sync)
 		{
-			DateTime now = DateTime.UtcNow;
+			DateTime now = _timeProvider.GetUtcNow().UtcDateTime;
 			_entries[key] = new CacheEntry(result, now, now);
 			EvictExpiredEntries();
 
@@ -94,7 +98,7 @@ public class InMemoryAssessmentCache : IAssessmentCacheProvider
 			return;
 		}
 
-		DateTime now = DateTime.UtcNow;
+		DateTime now = _timeProvider.GetUtcNow().UtcDateTime;
 		foreach ((string key, CacheEntry entry) in _entries)
 		{
 			if (now - entry.CreatedUtc > _ttl.Value)
@@ -111,7 +115,7 @@ public class InMemoryAssessmentCache : IAssessmentCacheProvider
 			return false;
 		}
 
-		return DateTime.UtcNow - entry.CreatedUtc > _ttl.Value;
+		return _timeProvider.GetUtcNow().UtcDateTime - entry.CreatedUtc > _ttl.Value;
 	}
 
 	private sealed record CacheEntry(IAssessmentResult Result, DateTime CreatedUtc, DateTime LastAccessUtc)
