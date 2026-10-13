@@ -1,16 +1,15 @@
 namespace PanoramicData.IssueAssessment.Assessments;
 
-
 /// <summary>
-/// Assesses whether a selected date value falls within an inclusive date range.
+/// Assesses whether a selected date value falls within an inclusive range.
 /// </summary>
-public sealed record DateRangeAssessment : IAssessmentDefinition, IJsonPathAssessmentDefinition
+/// <remarks>
+/// With a <see cref="DateFormat"/>, values must match it exactly; with a blank format, any date or date-time the
+/// invariant culture understands is accepted. A value carrying an offset is compared as UTC. A value that cannot be
+/// parsed scores <see cref="ValueAssessment.FailureScore"/> without a failure reason.
+/// </remarks>
+public sealed record DateRangeAssessment : ValueAssessment
 {
-	/// <summary>
-	/// Gets the JSONPath selector.
-	/// </summary>
-	public required string JsonPath { get; init; }
-
 	/// <summary>
 	/// Gets the inclusive minimum date.
 	/// </summary>
@@ -22,72 +21,11 @@ public sealed record DateRangeAssessment : IAssessmentDefinition, IJsonPathAsses
 	public DateTime? MaxDate { get; init; }
 
 	/// <summary>
-	/// Gets the expected date format for parsing source values.
+	/// Gets the exact format source values must have, or a blank string for flexible parsing.
 	/// </summary>
 	public string DateFormat { get; init; } = "O";
 
-	/// <summary>
-	/// Gets the score returned when the date is in range.
-	/// </summary>
-	public double SuccessScore { get; init; } = 1d;
-
-	/// <summary>
-	/// Gets the score returned when the date is out of range.
-	/// </summary>
-	public double FailureScore { get; init; }
-
-	/// <summary>
-	/// Gets an optional explanation template.
-	/// </summary>
-	public string? ExplanationTemplate { get; init; }
-
-	/// <inheritdoc />
-	public Task<AssessmentExecutionResult> ExecuteAsync(
-		JsonDocument input,
-		JsonDocument? virtualExtension,
-		CancellationToken cancellationToken)
-	{
-		ArgumentNullException.ThrowIfNull(input);
-		cancellationToken.ThrowIfCancellationRequested();
-
-		if (!JsonPathHelper.TrySelect(input, virtualExtension, JsonPath, out JsonElement value) || value.ValueKind != JsonValueKind.String)
-		{
-			AssessmentExecutionResult missingResult = new(
-				RawScore: FailureScore,
-				ExplanationText: BuildMissingExplanation(),
-				FailureReason: AssessmentFailureReason.JsonPathNotFound,
-				InnerException: null,
-				VirtualExtensionOutput: null);
-
-			return Task.FromResult(missingResult);
-		}
-
-		string text = value.GetString()!;
-		if (!TryParseDate(text, out DateTime actualDate))
-		{
-			AssessmentExecutionResult parseFailureResult = new(
-				RawScore: FailureScore,
-				ExplanationText: BuildParseFailureExplanation(text),
-				FailureReason: null,
-				InnerException: null,
-				VirtualExtensionOutput: null);
-
-			return Task.FromResult(parseFailureResult);
-		}
-
-		bool meetsMinimum = !MinDate.HasValue || actualDate >= MinDate.Value;
-		bool meetsMaximum = !MaxDate.HasValue || actualDate <= MaxDate.Value;
-		bool isInRange = meetsMinimum && meetsMaximum;
-
-		AssessmentExecutionResult result = new(
-			RawScore: isInRange ? SuccessScore : FailureScore,
-			ExplanationText: BuildRangeExplanation(actualDate, isInRange),
-			FailureReason: null,
-			InnerException: null,
-			VirtualExtensionOutput: null);
-
-		return Task.FromResult(result);
-	}
+	private protected override string ValueDescription => "Date value";
 
 	private bool HasFormat => !string.IsNullOrWhiteSpace(DateFormat);
 
@@ -96,6 +34,31 @@ public sealed record DateRangeAssessment : IAssessmentDefinition, IJsonPathAsses
 	/// flexible.
 	/// </summary>
 	private string DisplayFormat => HasFormat ? DateFormat : "s";
+
+	internal override string DescribeSettings()
+		=> string.Create(CultureInfo.InvariantCulture, $"{MinDate?.Ticks}:{MaxDate?.Ticks}:{DateFormat}");
+
+	private protected override ValueEvaluation Evaluate(JsonElement value)
+	{
+		if (!TryGetString(value, out string text))
+		{
+			return NotFound();
+		}
+
+		if (!TryParseDate(text, out DateTime actualDate))
+		{
+			return Scored(false, HasFormat
+				? $"Date value '{text}' at '{JsonPath}' could not be parsed with format '{DateFormat}'."
+				: $"Date value '{text}' at '{JsonPath}' could not be parsed as a date.");
+		}
+
+		bool isInRange = (!MinDate.HasValue || actualDate >= MinDate.Value) && (!MaxDate.HasValue || actualDate <= MaxDate.Value);
+		return Scored(isInRange, RangeExplanation(
+			$"Date {actualDate.ToString(DisplayFormat, CultureInfo.InvariantCulture)}",
+			isInRange,
+			MinDate?.ToString(DisplayFormat, CultureInfo.InvariantCulture) ?? "-inf",
+			MaxDate?.ToString(DisplayFormat, CultureInfo.InvariantCulture) ?? "+inf"));
+	}
 
 	private bool TryParseDate(string value, out DateTime date)
 	{
@@ -111,31 +74,5 @@ public sealed record DateRangeAssessment : IAssessmentDefinition, IJsonPathAsses
 		}
 
 		return parsed;
-	}
-
-	private string BuildMissingExplanation()
-	{
-		return ExplanationTemplate
-			?? $"Date value was not found at '{JsonPath}'.";
-	}
-
-	private string BuildParseFailureExplanation(string value)
-	{
-		return ExplanationTemplate
-			?? (HasFormat
-				? $"Date value '{value}' at '{JsonPath}' could not be parsed with format '{DateFormat}'."
-				: $"Date value '{value}' at '{JsonPath}' could not be parsed as a date.");
-	}
-
-	private string BuildRangeExplanation(DateTime date, bool isInRange)
-	{
-		string minimum = MinDate?.ToString(DisplayFormat, CultureInfo.InvariantCulture) ?? "-inf";
-		string maximum = MaxDate?.ToString(DisplayFormat, CultureInfo.InvariantCulture) ?? "+inf";
-		string actual = date.ToString(DisplayFormat, CultureInfo.InvariantCulture);
-
-		return ExplanationTemplate
-			?? (isInRange
-				? $"Date {actual} at '{JsonPath}' is within range {minimum}-{maximum}."
-				: $"Date {actual} at '{JsonPath}' is outside range {minimum}-{maximum}.");
 	}
 }

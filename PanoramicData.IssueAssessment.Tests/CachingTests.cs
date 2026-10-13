@@ -26,7 +26,7 @@ public class CachingTests
 	[Fact]
 	public async Task InMemoryCache_WithTtl_ExpiresEntry()
 	{
-		InMemoryAssessmentCache cache = new(ttl: TimeSpan.FromMilliseconds(30));
+		InMemoryAssessmentCache cache = new(new InMemoryAssessmentCacheOptions { TimeToLive = TimeSpan.FromMilliseconds(30) });
 		AssessmentOptions options = CreateOptions();
 		IssueAssessmentResult expected = CreateResult();
 		using JsonDocument issue = JsonDocument.Parse("{\"id\":2,\"title\":\"Issue\"}");
@@ -42,7 +42,7 @@ public class CachingTests
 	[Fact]
 	public async Task InMemoryCache_WhenCapacityExceeded_EvictsLeastRecentlyUsed()
 	{
-		InMemoryAssessmentCache cache = new(maxEntries: 1);
+		InMemoryAssessmentCache cache = new(new InMemoryAssessmentCacheOptions { MaxEntries = 1 });
 		AssessmentOptions options = CreateOptions();
 
 		using JsonDocument issue1 = JsonDocument.Parse("{\"id\":1,\"title\":\"One\"}");

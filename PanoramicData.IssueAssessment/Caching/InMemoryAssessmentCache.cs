@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 /// <summary>
 /// Thread-safe in-memory assessment result cache with optional TTL and bounded entry count.
 /// </summary>
+/// <remarks>Cached results are shared instances: treat them as read-only, and do not dispose their documents.</remarks>
 public class InMemoryAssessmentCache : IAssessmentCacheProvider
 {
 	private readonly ConcurrentDictionary<string, CacheEntry> _entries = new(StringComparer.Ordinal);
@@ -14,27 +15,33 @@ public class InMemoryAssessmentCache : IAssessmentCacheProvider
 	private readonly TimeProvider _timeProvider;
 
 	/// <summary>
-	/// Initializes a new cache instance.
+	/// Initializes a new cache with the default settings: up to 1000 entries and no expiry.
 	/// </summary>
-	/// <param name="maxEntries">Maximum number of entries before LRU eviction.</param>
-	/// <param name="ttl">Optional time-to-live for each entry.</param>
-	/// <param name="timeProvider">Clock used for expiry and recency; defaults to <see cref="TimeProvider.System"/>.</param>
-	/// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maxEntries"/> or <paramref name="ttl"/> is not positive.</exception>
-	public InMemoryAssessmentCache(int maxEntries = 1000, TimeSpan? ttl = null, TimeProvider? timeProvider = null)
+	public InMemoryAssessmentCache()
+		: this(new InMemoryAssessmentCacheOptions())
 	{
-		if (maxEntries <= 0)
+	}
+
+	/// <summary>
+	/// Initializes a new cache with the given settings.
+	/// </summary>
+	/// <param name="options">Cache settings.</param>
+	/// <exception cref="ArgumentNullException">Thrown when <paramref name="options"/> or its time provider is null.</exception>
+	/// <exception cref="ArgumentOutOfRangeException">Thrown when the maximum entry count or time-to-live is not positive.</exception>
+	public InMemoryAssessmentCache(InMemoryAssessmentCacheOptions options)
+	{
+		ArgumentNullException.ThrowIfNull(options);
+		ArgumentNullException.ThrowIfNull(options.TimeProvider, nameof(options));
+		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.MaxEntries, nameof(options));
+
+		if (options.TimeToLive <= TimeSpan.Zero)
 		{
-			throw new ArgumentOutOfRangeException(nameof(maxEntries), "Max entries must be greater than zero.");
+			throw new ArgumentOutOfRangeException(nameof(options), "TimeToLive must be greater than zero when provided.");
 		}
 
-		if (ttl.HasValue && ttl.Value <= TimeSpan.Zero)
-		{
-			throw new ArgumentOutOfRangeException(nameof(ttl), "TTL must be greater than zero when provided.");
-		}
-
-		_maxEntries = maxEntries;
-		_ttl = ttl;
-		_timeProvider = timeProvider ?? TimeProvider.System;
+		_maxEntries = options.MaxEntries;
+		_ttl = options.TimeToLive;
+		_timeProvider = options.TimeProvider;
 	}
 
 	/// <inheritdoc />
@@ -48,13 +55,13 @@ public class InMemoryAssessmentCache : IAssessmentCacheProvider
 			return Task.FromResult<IAssessmentResult?>(null);
 		}
 
-		if (IsExpired(entry))
+		if (IsExpired(entry, Now()))
 		{
 			_entries.TryRemove(key, out _);
 			return Task.FromResult<IAssessmentResult?>(null);
 		}
 
-		entry.LastAccessUtc = _timeProvider.GetUtcNow().UtcDateTime;
+		entry.LastAccessUtc = Now();
 		return Task.FromResult<IAssessmentResult?>(entry.Result);
 	}
 
@@ -66,16 +73,13 @@ public class InMemoryAssessmentCache : IAssessmentCacheProvider
 
 		lock (_sync)
 		{
-			DateTime now = _timeProvider.GetUtcNow().UtcDateTime;
+			DateTime now = Now();
 			_entries[key] = new CacheEntry(result, now, now);
-			EvictExpiredEntries();
+			EvictExpiredEntries(now);
 
 			while (_entries.Count > _maxEntries)
 			{
-				(string keyToEvict, CacheEntry _) = _entries
-					.OrderBy(entry => entry.Value.LastAccessUtc)
-					.First();
-
+				string keyToEvict = _entries.MinBy(pair => pair.Value.LastAccessUtc).Key;
 				_entries.TryRemove(keyToEvict, out _);
 			}
 		}
@@ -91,32 +95,20 @@ public class InMemoryAssessmentCache : IAssessmentCacheProvider
 		return Task.CompletedTask;
 	}
 
-	private void EvictExpiredEntries()
-	{
-		if (!_ttl.HasValue)
-		{
-			return;
-		}
+	private DateTime Now() => _timeProvider.GetUtcNow().UtcDateTime;
 
-		DateTime now = _timeProvider.GetUtcNow().UtcDateTime;
+	private void EvictExpiredEntries(DateTime now)
+	{
 		foreach ((string key, CacheEntry entry) in _entries)
 		{
-			if (now - entry.CreatedUtc > _ttl.Value)
+			if (IsExpired(entry, now))
 			{
 				_entries.TryRemove(key, out _);
 			}
 		}
 	}
 
-	private bool IsExpired(CacheEntry entry)
-	{
-		if (!_ttl.HasValue)
-		{
-			return false;
-		}
-
-		return _timeProvider.GetUtcNow().UtcDateTime - entry.CreatedUtc > _ttl.Value;
-	}
+	private bool IsExpired(CacheEntry entry, DateTime now) => now - entry.CreatedUtc > _ttl;
 
 	private sealed record CacheEntry(IAssessmentResult Result, DateTime CreatedUtc, DateTime LastAccessUtc)
 	{

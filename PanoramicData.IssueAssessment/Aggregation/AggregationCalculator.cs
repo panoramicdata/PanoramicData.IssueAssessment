@@ -72,14 +72,14 @@ public static class AggregationCalculator
 			StandardDeviation: Math.Sqrt(variance));
 	}
 
-	private static double? Percentile(ImmutableList<double> sortedValues, double percentile)
+	private static double? Percentile(ImmutableList<double> sortedValues, double quantile)
 	{
 		if (sortedValues.Count == 0)
 		{
 			return null;
 		}
 
-		double index = (sortedValues.Count - 1) * percentile;
+		double index = (sortedValues.Count - 1) * quantile;
 		int lower = (int)Math.Floor(index);
 		int upper = (int)Math.Ceiling(index);
 

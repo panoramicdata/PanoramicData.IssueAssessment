@@ -24,22 +24,17 @@ internal static class CategoryExecutor
 
 		// AssessmentExecutor records a cancelled assessment as a TimeoutExceeded result rather than throwing, so a category
 		// timeout surfaces as a timeout failure on each assessment it cut short and needs no handler of its own here.
-		using CancellationTokenSource? timeoutCts = category.CategoryTimeout.HasValue
-			? new CancellationTokenSource(category.CategoryTimeout.Value)
-			: null;
-		using CancellationTokenSource? linkedCts = timeoutCts is null
-			? null
-			: CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-		CancellationToken effectiveToken = linkedCts?.Token ?? cancellationToken;
-
-		if (category.AssessmentExecutionStrategy == AssessmentExecutionStrategy.Parallel)
+		using CancellationTokenSource timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		if (category.CategoryTimeout is { } timeout)
 		{
-			return await ExecuteParallelAsync(category, input, incomingVirtualDocument, effectiveFailureHandling, effectiveToken)
-				.ConfigureAwait(false);
+			timeoutSource.CancelAfter(timeout);
 		}
 
-		return await ExecuteSeriesAsync(category, input, incomingVirtualDocument, effectiveFailureHandling, effectiveToken)
-			.ConfigureAwait(false);
+		return category.AssessmentExecutionStrategy == AssessmentExecutionStrategy.Parallel
+			? await ExecuteParallelAsync(category, input, incomingVirtualDocument, effectiveFailureHandling, timeoutSource.Token)
+				.ConfigureAwait(false)
+			: await ExecuteSeriesAsync(category, input, incomingVirtualDocument, effectiveFailureHandling, timeoutSource.Token)
+				.ConfigureAwait(false);
 	}
 
 	private static async Task<(CategoryResult Category, ImmutableList<AssessmentFailure> Failures, JsonDocument? VirtualDocument)> ExecuteSeriesAsync(

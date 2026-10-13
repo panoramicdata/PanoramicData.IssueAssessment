@@ -1,17 +1,14 @@
 namespace PanoramicData.IssueAssessment.Assessments;
 
-using System.Globalization;
-
 /// <summary>
 /// Assesses whether a selected numeric value falls within an inclusive range.
 /// </summary>
-public sealed record NumericRangeAssessment : IAssessmentDefinition, IJsonPathAssessmentDefinition
+/// <remarks>
+/// Accepts JSON numbers and numeric strings in the invariant culture. NaN, infinities and numbers too large for a
+/// <see cref="double"/> are treated as not found.
+/// </remarks>
+public sealed record NumericRangeAssessment : ValueAssessment
 {
-	/// <summary>
-	/// Gets the JSONPath selector.
-	/// </summary>
-	public required string JsonPath { get; init; }
-
 	/// <summary>
 	/// Gets the inclusive minimum allowed value.
 	/// </summary>
@@ -22,72 +19,24 @@ public sealed record NumericRangeAssessment : IAssessmentDefinition, IJsonPathAs
 	/// </summary>
 	public double? MaxValue { get; init; }
 
-	/// <summary>
-	/// Gets the score returned when the value falls within range.
-	/// </summary>
-	public double SuccessScore { get; init; } = 1d;
+	private protected override string ValueDescription => "Numeric value";
 
-	/// <summary>
-	/// Gets the score returned when the value falls outside the range.
-	/// </summary>
-	public double FailureScore { get; init; }
+	internal override string DescribeSettings()
+		=> string.Create(CultureInfo.InvariantCulture, $"{MinValue:R}:{MaxValue:R}");
 
-	/// <summary>
-	/// Gets an optional explanation template.
-	/// </summary>
-	public string? ExplanationTemplate { get; init; }
-
-	/// <inheritdoc />
-	public Task<AssessmentExecutionResult> ExecuteAsync(
-		JsonDocument input,
-		JsonDocument? virtualExtension,
-		CancellationToken cancellationToken)
+	private protected override ValueEvaluation Evaluate(JsonElement value)
 	{
-		ArgumentNullException.ThrowIfNull(input);
-		cancellationToken.ThrowIfCancellationRequested();
-
-		if (!JsonPathHelper.TrySelect(input, virtualExtension, JsonPath, out JsonElement value) || !TryGetNumericValue(value, out double actualValue))
+		if (!TryGetNumericValue(value, out double actualValue))
 		{
-			AssessmentExecutionResult missingResult = new(
-				RawScore: FailureScore,
-				ExplanationText: BuildMissingExplanation(),
-				FailureReason: AssessmentFailureReason.JsonPathNotFound,
-				InnerException: null,
-				VirtualExtensionOutput: null);
-
-			return Task.FromResult(missingResult);
+			return NotFound();
 		}
 
-		bool meetsMinimum = !MinValue.HasValue || actualValue >= MinValue.Value;
-		bool meetsMaximum = !MaxValue.HasValue || actualValue <= MaxValue.Value;
-		bool isInRange = meetsMinimum && meetsMaximum;
-
-		AssessmentExecutionResult result = new(
-			RawScore: isInRange ? SuccessScore : FailureScore,
-			ExplanationText: BuildRangeExplanation(actualValue, isInRange),
-			FailureReason: null,
-			InnerException: null,
-			VirtualExtensionOutput: null);
-
-		return Task.FromResult(result);
-	}
-
-	private string BuildMissingExplanation()
-	{
-		return ExplanationTemplate
-			?? $"Numeric value was not found at '{JsonPath}'.";
-	}
-
-	private string BuildRangeExplanation(double actualValue, bool isInRange)
-	{
-		string minimum = MinValue?.ToString(CultureInfo.InvariantCulture) ?? "-inf";
-		string maximum = MaxValue?.ToString(CultureInfo.InvariantCulture) ?? "+inf";
-		string valueText = actualValue.ToString(CultureInfo.InvariantCulture);
-
-		return ExplanationTemplate
-			?? (isInRange
-				? $"Value {valueText} at '{JsonPath}' is within range {minimum}-{maximum}."
-				: $"Value {valueText} at '{JsonPath}' is outside range {minimum}-{maximum}.");
+		bool isInRange = (!MinValue.HasValue || actualValue >= MinValue.Value) && (!MaxValue.HasValue || actualValue <= MaxValue.Value);
+		return Scored(isInRange, RangeExplanation(
+			$"Value {actualValue.ToString(CultureInfo.InvariantCulture)}",
+			isInRange,
+			MinValue?.ToString(CultureInfo.InvariantCulture) ?? "-inf",
+			MaxValue?.ToString(CultureInfo.InvariantCulture) ?? "+inf"));
 	}
 
 	private static bool TryGetNumericValue(JsonElement value, out double actualValue)

@@ -17,58 +17,12 @@ internal static class SeriesExecutor
 		ArgumentNullException.ThrowIfNull(input);
 
 		List<CategoryResult> categories = new(options.Categories.Count);
-		List<AssessmentFailure> failures = new();
+		List<AssessmentFailure> failures = [];
 		JsonDocument? virtualDocument = null;
 
 		for (int index = 0; index < options.Categories.Count; index++)
 		{
 			AssessmentCategory category = options.Categories[index];
-
-			if (index > 0)
-			{
-				AssessmentCategory previousCategory = options.Categories[index - 1];
-				if (previousCategory.SeriesGateCondition is not null)
-				{
-					CategoryResult priorResult = categories[index - 1];
-					bool shouldContinue;
-					try
-					{
-						shouldContinue = await previousCategory.SeriesGateCondition
-							.ShouldExecuteNextAsync(priorResult, failures.ToImmutableList(), cancellationToken)
-							.ConfigureAwait(false);
-					}
-					catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-					{
-						// Like a cancelled assessment, a cancelled gate is recorded as a timeout so a global timeout yields a
-						// partial result; the assessor rethrows when the caller asked for the cancellation.
-						failures.Add(new AssessmentFailure(
-							CategoryName: previousCategory.Name,
-							AssessmentName: nameof(AssessmentCategory.SeriesGateCondition),
-							Reason: AssessmentFailureReason.TimeoutExceeded,
-							Message: $"Series gate condition of category '{previousCategory.Name}' was canceled due to timeout.",
-							InnerException: null));
-						break;
-					}
-					catch (Exception exception) when (exception is not OperationCanceledException)
-					{
-						// A gate that throws is recorded like an assessment that throws; the series stops, as nothing says
-						// whether it should have continued.
-						failures.Add(new AssessmentFailure(
-							CategoryName: previousCategory.Name,
-							AssessmentName: nameof(AssessmentCategory.SeriesGateCondition),
-							Reason: AssessmentFailureReason.ThrowingException,
-							Message: $"Series gate condition of category '{previousCategory.Name}' threw an exception.",
-							InnerException: exception));
-						break;
-					}
-
-					if (!shouldContinue)
-					{
-						break;
-					}
-				}
-			}
-
 			(CategoryResult categoryResult, ImmutableList<AssessmentFailure> categoryFailures, JsonDocument? categoryVirtualDocument) =
 				await CategoryExecutor.ExecuteAsync(category, input, virtualDocument, options.FailureHandling, cancellationToken)
 					.ConfigureAwait(false);
@@ -77,12 +31,63 @@ internal static class SeriesExecutor
 			failures.AddRange(categoryFailures);
 			virtualDocument = categoryVirtualDocument;
 
-			if (options.FailureHandling == FailureHandlingStrategy.FailFast && categoryFailures.Count > 0)
+			bool isLast = index == options.Categories.Count - 1;
+			bool stopOnFailure = options.FailureHandling == FailureHandlingStrategy.FailFast && categoryFailures.Count > 0;
+			if (isLast || stopOnFailure || !await ShouldContinueAsync(category, categoryResult, failures, cancellationToken).ConfigureAwait(false))
 			{
 				break;
 			}
 		}
 
-		return new ExecutionResult(categories.ToImmutableList(), failures.ToImmutableList(), virtualDocument);
+		return new ExecutionResult([.. categories], [.. failures], virtualDocument);
 	}
+
+	/// <summary>
+	/// Asks the category's gate, if it has one, whether the remaining categories should run. A gate that is cancelled
+	/// or throws is recorded as a failure and stops the series.
+	/// </summary>
+	private static async Task<bool> ShouldContinueAsync(
+		AssessmentCategory category,
+		CategoryResult categoryResult,
+		List<AssessmentFailure> failures,
+		CancellationToken cancellationToken)
+	{
+		if (category.SeriesGateCondition is null)
+		{
+			return true;
+		}
+
+		try
+		{
+			return await category.SeriesGateCondition
+				.ShouldExecuteNextAsync(categoryResult, [.. failures], cancellationToken)
+				.ConfigureAwait(false);
+		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			// Like a cancelled assessment, a cancelled gate is recorded as a timeout so a global timeout yields a partial
+			// result; the assessor rethrows when the caller asked for the cancellation.
+			failures.Add(GateFailure(category, AssessmentFailureReason.TimeoutExceeded, "was canceled due to timeout", null));
+			return false;
+		}
+		catch (Exception exception) when (exception is not OperationCanceledException)
+		{
+			// A gate that throws is recorded like an assessment that throws; the series stops, as nothing says whether
+			// it should have continued.
+			failures.Add(GateFailure(category, AssessmentFailureReason.ThrowingException, "threw an exception", exception));
+			return false;
+		}
+	}
+
+	private static AssessmentFailure GateFailure(
+		AssessmentCategory category,
+		AssessmentFailureReason reason,
+		string what,
+		Exception? exception)
+		=> new(
+			CategoryName: category.Name,
+			AssessmentName: nameof(AssessmentCategory.SeriesGateCondition),
+			Reason: reason,
+			Message: $"Series gate condition of category '{category.Name}' {what}.",
+			InnerException: exception);
 }

@@ -235,10 +235,4 @@ public class SeriesExecutionTests : TestBase
 		observer.ReceivedVirtualExtensions.Should().Equal([null]);
 		result.VirtualDocument.Should().BeNull();
 	}
-
-	private sealed class ThrowingGate(Exception exception) : ISeriesGateCondition
-	{
-		public Task<bool> ShouldExecuteNextAsync(CategoryResult priorCategoryResult, ImmutableList<AssessmentFailure> priorFailures, CancellationToken cancellationToken)
-			=> Task.FromException<bool>(exception);
-	}
 }

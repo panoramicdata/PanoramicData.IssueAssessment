@@ -43,7 +43,7 @@ public class RegexAssessmentTests : TestBase
 		AssessmentExecutionResult result = await ExecuteAsync(Create(), """{"summary":"BUG-123"}""");
 
 		result.RawScore.Should().Be(0.2d);
-		result.ExplanationText.Should().Be(@"Pattern '^BUG-\d+$' did not match value at '$.title'.");
+		result.ExplanationText.Should().Be("String value was not found at '$.title'.");
 		result.FailureReason.Should().Be(AssessmentFailureReason.JsonPathNotFound);
 	}
 

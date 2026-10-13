@@ -20,13 +20,7 @@ public static class ScoreCalculator
 		return assessment.Definition switch
 		{
 			PresenceAssessment presence => ToRange(presence.PresentScore, presence.AbsentScore),
-			RegexAssessment regex => ToRange(regex.SuccessScore, regex.FailureScore),
-			StringLengthAssessment stringLength => ToRange(stringLength.SuccessScore, stringLength.FailureScore),
-			WordCountAssessment wordCount => ToRange(wordCount.SuccessScore, wordCount.FailureScore),
-			NumericRangeAssessment numericRange => ToRange(numericRange.SuccessScore, numericRange.FailureScore),
-			DateRangeAssessment dateRange => ToRange(dateRange.SuccessScore, dateRange.FailureScore),
-			EnumAssessment enumAssessment => ToRange(enumAssessment.SuccessScore, enumAssessment.FailureScore),
-			PatternCountAssessment patternCount => ToRange(patternCount.SuccessScore, patternCount.FailureScore),
+			ValueAssessment value => ToRange(value.SuccessScore, value.FailureScore),
 			JsonPathSelectorAssessment selector => ToRange(selector.SuccessScore, selector.FailureScore),
 			// Callbacks and custom definitions declare no bounds, so their raw scores are taken to lie in [0, 1].
 			_ => (DefaultUnknownMinimum, DefaultUnknownMaximum),
@@ -79,7 +73,8 @@ public static class ScoreCalculator
 			throw new ArgumentException("Minimum raw score cannot be greater than maximum raw score.");
 		}
 
-		if (minPossibleRaw == maxPossibleRaw)
+		// The range is never negative here, so a negligible width means the bounds have collapsed.
+		if (IsNegligible(maxPossibleRaw - minPossibleRaw))
 		{
 			return 1d;
 		}
@@ -89,61 +84,76 @@ public static class ScoreCalculator
 	}
 
 	/// <summary>
-	/// Calculates simple and exponential weighted averages from scored values.
+	/// Calculates simple and exponential weighted averages from scored values, with an exponential decay of 0.5.
 	/// </summary>
-	/// <param name="values">Input values, in logical execution order for exponential weighting.</param>
-	/// <param name="exponentialDecay">
-	/// Decay factor for exponential weighting, where 0 favors earlier entries and 1 keeps all entries equal.
-	/// </param>
+	/// <param name="values">Input values, oldest first.</param>
 	/// <returns>Simple and exponential weighted averages plus summed absolute weight.</returns>
 	public static (double? SimpleWeightedAverage, double? ExponentialWeightedAverage, double WeightSum) CalculateWeightedAverages(
+		IEnumerable<(double? Score, double Weight)> values)
+		=> CalculateWeightedAverages(values, 0.5d);
+
+	/// <summary>
+	/// Calculates simple and exponential weighted averages from scored values.
+	/// </summary>
+	/// <param name="values">Input values, oldest first.</param>
+	/// <param name="exponentialDecay">
+	/// Decay factor for exponential weighting, in [0, 1]: each step back from the latest entry multiplies its weight by
+	/// this factor, so 0 uses only the latest entry and 1 weights every entry equally.
+	/// </param>
+	/// <returns>
+	/// Simple and exponential weighted averages (null when there is nothing to average, or when the weights cancel out)
+	/// plus the summed absolute weight.
+	/// </returns>
+	/// <exception cref="ArgumentNullException">Thrown when <paramref name="values"/> is null.</exception>
+	/// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="exponentialDecay"/> is outside [0, 1].</exception>
+	public static (double? SimpleWeightedAverage, double? ExponentialWeightedAverage, double WeightSum) CalculateWeightedAverages(
 		IEnumerable<(double? Score, double Weight)> values,
-		double exponentialDecay = 0.5d)
+		double exponentialDecay)
 	{
 		ArgumentNullException.ThrowIfNull(values);
 
-		if (exponentialDecay < 0d || exponentialDecay > 1d)
+		if (exponentialDecay is < 0d or > 1d)
 		{
 			throw new ArgumentOutOfRangeException(nameof(exponentialDecay), "Exponential decay must be between 0 and 1.");
 		}
 
-		List<(double Score, double Weight)> normalized = values
-			.Where(value => value.Score.HasValue)
-			.Select(value => (value.Score!.Value, value.Weight))
-			.Where(value => value.Weight != 0d)
-			.ToList();
+		List<(double Score, double Weight)> scored = [.. values
+			.Where(value => value.Score.HasValue && !IsNegligible(value.Weight))
+			.Select(value => (value.Score!.Value, value.Weight))];
 
-		if (normalized.Count == 0)
+		if (scored.Count == 0)
 		{
 			return (null, null, 0d);
 		}
 
-		double simpleWeightSum = normalized.Sum(value => value.Weight);
-		double absoluteWeightSum = normalized.Sum(value => Math.Abs(value.Weight));
-
-		double? simpleAverage = simpleWeightSum == 0d
-			? null
-			: normalized.Sum(value => value.Score * value.Weight) / simpleWeightSum;
-
-		double exponentialNumerator = 0d;
-		double exponentialDenominator = 0d;
-
-		for (int index = 0; index < normalized.Count; index++)
-		{
-			int reverseIndex = normalized.Count - 1 - index;
-			double decayFactor = Math.Pow(exponentialDecay, reverseIndex);
-			double effectiveWeight = normalized[index].Weight * decayFactor;
-
-			exponentialNumerator += normalized[index].Score * effectiveWeight;
-			exponentialDenominator += effectiveWeight;
-		}
-
-		double? exponentialAverage = exponentialDenominator == 0d
-			? null
-			: exponentialNumerator / exponentialDenominator;
+		double absoluteWeightSum = scored.Sum(value => Math.Abs(value.Weight));
+		double? simpleAverage = WeightedAverage(scored.Select(value => (value.Score, value.Weight)));
+		double? exponentialAverage = WeightedAverage(scored.Select((value, index) =>
+			(value.Score, value.Weight * Math.Pow(exponentialDecay, scored.Count - 1 - index))));
 
 		return (simpleAverage, exponentialAverage, absoluteWeightSum);
 	}
+
+	/// <summary>
+	/// Σ(score × weight) / Σ(weight), or null when the weights sum to (effectively) zero.
+	/// </summary>
+	private static double? WeightedAverage(IEnumerable<(double Score, double Weight)> values)
+	{
+		double numerator = 0d;
+		double denominator = 0d;
+		foreach ((double score, double weight) in values)
+		{
+			numerator += score * weight;
+			denominator += weight;
+		}
+
+		return IsNegligible(denominator) ? null : numerator / denominator;
+	}
+
+	/// <summary>
+	/// True for values indistinguishable from zero after floating-point rounding, such as weights that cancel out.
+	/// </summary>
+	private static bool IsNegligible(double value) => Math.Abs(value) < 1e-12d;
 
 	private static (double Minimum, double Maximum) ToRange(double first, double second)
 	{

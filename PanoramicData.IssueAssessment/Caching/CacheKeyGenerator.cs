@@ -63,13 +63,7 @@ public static class CacheKeyGenerator
 		return definition switch
 		{
 			PresenceAssessment value => string.Create(invariant, $"Presence:{value.JsonPath}:{value.PresentScore:R}:{value.AbsentScore:R}:{value.ExplanationTemplate}"),
-			RegexAssessment value => string.Create(invariant, $"Regex:{value.JsonPath}:{value.Pattern}:{value.SuccessScore:R}:{value.FailureScore:R}:{value.ExplanationTemplate}"),
-			StringLengthAssessment value => string.Create(invariant, $"StringLength:{value.JsonPath}:{value.MinimumLength}:{value.MaximumLength}:{value.SuccessScore:R}:{value.FailureScore:R}:{value.ExplanationTemplate}"),
-			WordCountAssessment value => string.Create(invariant, $"WordCount:{value.JsonPath}:{value.MinimumWordCount}:{value.MaximumWordCount}:{value.SuccessScore:R}:{value.FailureScore:R}:{value.ExplanationTemplate}"),
-			NumericRangeAssessment value => string.Create(invariant, $"NumericRange:{value.JsonPath}:{value.MinValue:R}:{value.MaxValue:R}:{value.SuccessScore:R}:{value.FailureScore:R}:{value.ExplanationTemplate}"),
-			DateRangeAssessment value => string.Create(invariant, $"DateRange:{value.JsonPath}:{value.MinDate?.Ticks}:{value.MaxDate?.Ticks}:{value.DateFormat}:{value.SuccessScore:R}:{value.FailureScore:R}:{value.ExplanationTemplate}"),
-			EnumAssessment value => string.Create(invariant, $"Enum:{value.JsonPath}:{string.Join(',', value.AllowedValues.OrderBy(entry => entry, StringComparer.Ordinal))}:{value.SuccessScore:R}:{value.FailureScore:R}:{value.ExplanationTemplate}"),
-			PatternCountAssessment value => string.Create(invariant, $"PatternCount:{value.JsonPath}:{value.Pattern}:{value.MinMatches}:{value.MaxMatches}:{value.SuccessScore:R}:{value.FailureScore:R}:{value.ExplanationTemplate}"),
+			ValueAssessment value => string.Create(invariant, $"{value.GetType().Name}:{value.JsonPath}:{value.SuccessScore:R}:{value.FailureScore:R}:{value.ExplanationTemplate}:{value.DescribeSettings()}"),
 			JsonPathSelectorAssessment value => string.Create(invariant, $"JsonPathSelector:{value.JsonPath}:{value.SuccessScore:R}:{value.FailureScore:R}:{value.ExplanationTemplate}:{InstanceToken(value.Evaluator)}"),
 			CustomCallbackAssessment value => string.Create(invariant, $"CustomCallback:{value.ExplanationTemplate}:{InstanceToken(value.Callback)}"),
 			_ => $"{definition.GetType().FullName}:{InstanceToken(definition)}",

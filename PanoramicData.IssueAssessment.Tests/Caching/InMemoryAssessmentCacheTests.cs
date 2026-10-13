@@ -64,7 +64,7 @@ public class InMemoryAssessmentCacheTests : TestBase
 	public async Task GetAsync_AfterTtl_ExpiresAndRemovesEntry()
 	{
 		ManualTimeProvider clock = new();
-		InMemoryAssessmentCache cache = new(ttl: TimeSpan.FromMinutes(5), timeProvider: clock);
+		InMemoryAssessmentCache cache = new(new InMemoryAssessmentCacheOptions { TimeToLive = TimeSpan.FromMinutes(5), TimeProvider = clock });
 		AssessmentOptions options = Options();
 		using JsonDocument issue = Issue(1);
 		await cache.SetAsync(issue, options, Result("stored"), CancellationToken);
@@ -80,7 +80,7 @@ public class InMemoryAssessmentCacheTests : TestBase
 	public async Task GetAsync_NoTtl_NeverExpires()
 	{
 		ManualTimeProvider clock = new();
-		InMemoryAssessmentCache cache = new(timeProvider: clock);
+		InMemoryAssessmentCache cache = new(new InMemoryAssessmentCacheOptions { TimeProvider = clock });
 		AssessmentOptions options = Options();
 		using JsonDocument issue = Issue(1);
 		await cache.SetAsync(issue, options, Result("stored"), CancellationToken);
@@ -94,7 +94,7 @@ public class InMemoryAssessmentCacheTests : TestBase
 	public async Task SetAsync_WithTtl_EvictsOtherExpiredEntries()
 	{
 		ManualTimeProvider clock = new();
-		InMemoryAssessmentCache cache = new(maxEntries: 2, ttl: TimeSpan.FromMinutes(1), timeProvider: clock);
+		InMemoryAssessmentCache cache = new(new InMemoryAssessmentCacheOptions { MaxEntries = 2, TimeToLive = TimeSpan.FromMinutes(1), TimeProvider = clock });
 		AssessmentOptions options = Options();
 		using JsonDocument first = Issue(1);
 		using JsonDocument second = Issue(2);
@@ -116,7 +116,7 @@ public class InMemoryAssessmentCacheTests : TestBase
 	public async Task SetAsync_OverCapacity_EvictsLeastRecentlyUsed()
 	{
 		ManualTimeProvider clock = new();
-		InMemoryAssessmentCache cache = new(maxEntries: 2, timeProvider: clock);
+		InMemoryAssessmentCache cache = new(new InMemoryAssessmentCacheOptions { MaxEntries = 2, TimeProvider = clock });
 		AssessmentOptions options = Options();
 		using JsonDocument first = Issue(1);
 		using JsonDocument second = Issue(2);
@@ -170,9 +170,9 @@ public class InMemoryAssessmentCacheTests : TestBase
 	[InlineData(-1)]
 	public void Constructor_NonPositiveMaxEntries_Throws(int maxEntries)
 	{
-		Action act = () => _ = new InMemoryAssessmentCache(maxEntries);
+		Action act = () => _ = new InMemoryAssessmentCache(new InMemoryAssessmentCacheOptions { MaxEntries = maxEntries });
 
-		act.Should().Throw<ArgumentOutOfRangeException>().WithParameterName(nameof(maxEntries));
+		act.Should().Throw<ArgumentOutOfRangeException>().WithParameterName("options");
 	}
 
 	[Theory]
@@ -180,15 +180,15 @@ public class InMemoryAssessmentCacheTests : TestBase
 	[InlineData(-1)]
 	public void Constructor_NonPositiveTtl_Throws(int seconds)
 	{
-		Action act = () => _ = new InMemoryAssessmentCache(ttl: TimeSpan.FromSeconds(seconds));
+		Action act = () => _ = new InMemoryAssessmentCache(new InMemoryAssessmentCacheOptions { TimeToLive = TimeSpan.FromSeconds(seconds) });
 
-		act.Should().Throw<ArgumentOutOfRangeException>().WithParameterName("ttl");
+		act.Should().Throw<ArgumentOutOfRangeException>().WithParameterName("options");
 	}
 
 	[Fact]
 	public async Task ConcurrentUse_KeepsWithinCapacityAndDoesNotThrow()
 	{
-		InMemoryAssessmentCache cache = new(maxEntries: 10);
+		InMemoryAssessmentCache cache = new(new InMemoryAssessmentCacheOptions { MaxEntries = 10 });
 		AssessmentOptions options = Options();
 
 		await Parallel.ForAsync(0, 200, CancellationToken, async (index, token) =>

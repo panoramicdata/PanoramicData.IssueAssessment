@@ -53,7 +53,8 @@ using var ticket = JsonDocument.Parse("""
 	}
 	""");
 
-IAssessmentResult result = await assessor.AssessAsync(ticket);
+// cancellationToken: your request's token, or CancellationToken.None.
+IAssessmentResult result = await assessor.AssessAsync(ticket, cancellationToken);
 
 Console.WriteLine($"Overall: {result.Aggregations.Weighted.WeightedAverage:P0}");
 foreach (var category in result.Categories)
@@ -243,7 +244,11 @@ SHA-256 of the ticket with a description of the configuration that does not depe
 evaluators, gates and custom definitions are keyed by instance, so two different callbacks never share an entry.
 
 ```csharp
-var assessor = new IssueAssessor(options, new InMemoryAssessmentCache(maxEntries: 10_000, ttl: TimeSpan.FromHours(1)));
+var assessor = new IssueAssessor(options, new InMemoryAssessmentCache(new InMemoryAssessmentCacheOptions
+{
+	MaxEntries = 10_000,
+	TimeToLive = TimeSpan.FromHours(1),
+}));
 ```
 
 ## Extending

@@ -1,5 +1,6 @@
 using PanoramicData.IssueAssessment.Caching;
 using PanoramicData.IssueAssessment.Tests.Assessments;
+using PanoramicData.IssueAssessment.Tests.Integration;
 using static PanoramicData.IssueAssessment.Tests.Caching.CachingTestHelpers;
 
 namespace PanoramicData.IssueAssessment.Tests.Caching;
@@ -88,7 +89,7 @@ public class CacheKeyGeneratorTests
 	{
 		AssessmentOptions options = Options();
 
-		Key(options, """{"title":"x"}""").Should().NotBe(Key(options, """{"title":"y"}"""));
+		Key(options).Should().NotBe(Key(options, """{"title":"y"}"""));
 	}
 
 	[Fact]
@@ -120,8 +121,8 @@ public class CacheKeyGeneratorTests
 	[Fact]
 	public void Generate_CustomDefinitionTypes_AreKeyedPerInstance()
 	{
-		CustomDefinition first = new();
-		CustomDefinition second = new();
+		StubDefinition first = new();
+		StubDefinition second = new();
 
 		Key(first).Should().NotBe(Key(second));
 		Key(first).Should().Be(Key(first));
@@ -131,8 +132,8 @@ public class CacheKeyGeneratorTests
 	public void Generate_GateConditionPresenceAndIdentity_ChangeTheKey()
 	{
 		AssessmentOptions plain = Options();
-		AssessmentOptions gated = plain with { Categories = [plain.Categories[0] with { SeriesGateCondition = new AlwaysGate() }] };
-		AssessmentOptions otherGate = plain with { Categories = [plain.Categories[0] with { SeriesGateCondition = new AlwaysGate() }] };
+		AssessmentOptions gated = plain with { Categories = [plain.Categories[0] with { SeriesGateCondition = new RecordingGate(shouldContinue: true) }] };
+		AssessmentOptions otherGate = plain with { Categories = [plain.Categories[0] with { SeriesGateCondition = new RecordingGate(shouldContinue: true) }] };
 
 		Key(plain).Should().NotBe(Key(gated));
 		Key(gated).Should().NotBe(Key(otherGate));
@@ -198,17 +199,5 @@ public class CacheKeyGeneratorTests
 
 		nullIssue.Should().Throw<ArgumentNullException>();
 		nullOptions.Should().Throw<ArgumentNullException>();
-	}
-
-	private sealed class CustomDefinition : IAssessmentDefinition
-	{
-		public Task<AssessmentExecutionResult> ExecuteAsync(JsonDocument input, JsonDocument? virtualExtension, CancellationToken cancellationToken)
-			=> Task.FromResult(new AssessmentExecutionResult(1d, null, null, null, null));
-	}
-
-	private sealed class AlwaysGate : ISeriesGateCondition
-	{
-		public Task<bool> ShouldExecuteNextAsync(CategoryResult priorCategoryResult, ImmutableList<AssessmentFailure> priorFailures, CancellationToken cancellationToken)
-			=> Task.FromResult(true);
 	}
 }

@@ -1,79 +1,28 @@
 namespace PanoramicData.IssueAssessment.Assessments;
 /// <summary>
-/// Assesses whether a selected string value is contained in an allowed whitelist.
+/// Assesses whether a selected string value is one of an allowed set.
 /// </summary>
-public sealed record EnumAssessment : IAssessmentDefinition, IJsonPathAssessmentDefinition
+/// <remarks>Comparison uses the set's comparer, so case sensitivity is chosen when the set is created.</remarks>
+public sealed record EnumAssessment : ValueAssessment
 {
-	/// <summary>
-	/// Gets the JSONPath selector.
-	/// </summary>
-	public required string JsonPath { get; init; }
-
 	/// <summary>
 	/// Gets the allowed string values.
 	/// </summary>
 	public required ImmutableHashSet<string> AllowedValues { get; init; }
 
-	/// <summary>
-	/// Gets the score returned when the value is allowed.
-	/// </summary>
-	public double SuccessScore { get; init; } = 1d;
+	internal override string DescribeSettings()
+		=> string.Join(',', AllowedValues.Order(StringComparer.Ordinal));
 
-	/// <summary>
-	/// Gets the score returned when the value is not allowed.
-	/// </summary>
-	public double FailureScore { get; init; }
-
-	/// <summary>
-	/// Gets an optional explanation template.
-	/// </summary>
-	public string? ExplanationTemplate { get; init; }
-
-	/// <inheritdoc />
-	public Task<AssessmentExecutionResult> ExecuteAsync(
-		JsonDocument input,
-		JsonDocument? virtualExtension,
-		CancellationToken cancellationToken)
+	private protected override ValueEvaluation Evaluate(JsonElement value)
 	{
-		ArgumentNullException.ThrowIfNull(input);
-		cancellationToken.ThrowIfCancellationRequested();
-
-		if (!JsonPathHelper.TrySelect(input, virtualExtension, JsonPath, out JsonElement value) || value.ValueKind != JsonValueKind.String)
+		if (!TryGetString(value, out string candidate))
 		{
-			AssessmentExecutionResult missingResult = new(
-				RawScore: FailureScore,
-				ExplanationText: BuildMissingExplanation(),
-				FailureReason: AssessmentFailureReason.JsonPathNotFound,
-				InnerException: null,
-				VirtualExtensionOutput: null);
-
-			return Task.FromResult(missingResult);
+			return NotFound();
 		}
 
-		string candidate = value.GetString()!;
 		bool isAllowed = AllowedValues.Contains(candidate);
-
-		AssessmentExecutionResult result = new(
-			RawScore: isAllowed ? SuccessScore : FailureScore,
-			ExplanationText: BuildAllowedExplanation(candidate, isAllowed),
-			FailureReason: null,
-			InnerException: null,
-			VirtualExtensionOutput: null);
-
-		return Task.FromResult(result);
-	}
-
-	private string BuildMissingExplanation()
-	{
-		return ExplanationTemplate
-			?? $"String value was not found at '{JsonPath}'.";
-	}
-
-	private string BuildAllowedExplanation(string candidate, bool isAllowed)
-	{
-		return ExplanationTemplate
-			?? (isAllowed
-				? $"Value '{candidate}' at '{JsonPath}' is allowed."
-				: $"Value '{candidate}' at '{JsonPath}' is not allowed.");
+		return Scored(isAllowed, isAllowed
+			? $"Value '{candidate}' at '{JsonPath}' is allowed."
+			: $"Value '{candidate}' at '{JsonPath}' is not allowed.");
 	}
 }

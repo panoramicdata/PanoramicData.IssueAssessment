@@ -1,96 +1,41 @@
 namespace PanoramicData.IssueAssessment.Assessments;
 /// <summary>
-/// Assesses whether regex pattern match count in a selected string value falls within an inclusive range.
+/// Assesses whether a regex pattern occurs in a selected string value a number of times within an inclusive range.
 /// </summary>
-public sealed record PatternCountAssessment : IAssessmentDefinition, IJsonPathAssessmentDefinition, IRegexPatternAssessmentDefinition
+public sealed record PatternCountAssessment : ValueAssessment, IRegexPatternAssessmentDefinition
 {
-	/// <summary>
-	/// Gets the JSONPath selector.
-	/// </summary>
-	public required string JsonPath { get; init; }
-
 	/// <summary>
 	/// Gets the regex pattern.
 	/// </summary>
 	public required string Pattern { get; init; }
 
 	/// <summary>
-	/// Gets the inclusive minimum match count.
+	/// Gets the inclusive minimum match count, or null for no minimum.
 	/// </summary>
 	public int? MinMatches { get; init; }
 
 	/// <summary>
-	/// Gets the inclusive maximum match count.
+	/// Gets the inclusive maximum match count, or null for no maximum.
 	/// </summary>
 	public int? MaxMatches { get; init; }
 
-	/// <summary>
-	/// Gets the score returned when match count is in range.
-	/// </summary>
-	public double SuccessScore { get; init; } = 1d;
+	internal override string DescribeSettings()
+		=> string.Create(CultureInfo.InvariantCulture, $"{Pattern}:{MinMatches}:{MaxMatches}");
 
-	/// <summary>
-	/// Gets the score returned when match count is outside range.
-	/// </summary>
-	public double FailureScore { get; init; }
-
-	/// <summary>
-	/// Gets an optional explanation template.
-	/// </summary>
-	public string? ExplanationTemplate { get; init; }
-
-	/// <inheritdoc />
-	public Task<AssessmentExecutionResult> ExecuteAsync(
-		JsonDocument input,
-		JsonDocument? virtualExtension,
-		CancellationToken cancellationToken)
+	private protected override ValueEvaluation Evaluate(JsonElement value)
 	{
-		ArgumentNullException.ThrowIfNull(input);
-		cancellationToken.ThrowIfCancellationRequested();
-
-		if (!JsonPathHelper.TrySelect(input, virtualExtension, JsonPath, out JsonElement value) || value.ValueKind != JsonValueKind.String)
+		if (!TryGetString(value, out string text))
 		{
-			AssessmentExecutionResult missingResult = new(
-				RawScore: FailureScore,
-				ExplanationText: BuildMissingExplanation(),
-				FailureReason: AssessmentFailureReason.JsonPathNotFound,
-				InnerException: null,
-				VirtualExtensionOutput: null);
-
-			return Task.FromResult(missingResult);
+			return NotFound();
 		}
 
-		string text = value.GetString()!;
 		int matchCount = RegexCache.GetOrAdd(Pattern).Count(text);
-
-		bool meetsMinimum = !MinMatches.HasValue || matchCount >= MinMatches.Value;
-		bool meetsMaximum = !MaxMatches.HasValue || matchCount <= MaxMatches.Value;
-		bool isInRange = meetsMinimum && meetsMaximum;
-
-		AssessmentExecutionResult result = new(
-			RawScore: isInRange ? SuccessScore : FailureScore,
-			ExplanationText: BuildRangeExplanation(matchCount, isInRange),
-			FailureReason: null,
-			InnerException: null,
-			VirtualExtensionOutput: null);
-
-		return Task.FromResult(result);
-	}
-
-	private string BuildMissingExplanation()
-	{
-		return ExplanationTemplate
-			?? $"String value was not found at '{JsonPath}'.";
-	}
-
-	private string BuildRangeExplanation(int matchCount, bool isInRange)
-	{
+		bool isInRange = (!MinMatches.HasValue || matchCount >= MinMatches.Value) && (!MaxMatches.HasValue || matchCount <= MaxMatches.Value);
 		string minimum = MinMatches?.ToString(CultureInfo.InvariantCulture) ?? "0";
 		string maximum = MaxMatches?.ToString(CultureInfo.InvariantCulture) ?? "+inf";
 
-		return ExplanationTemplate
-			?? (isInRange
-				? $"Found {matchCount} matches at '{JsonPath}', within expected range {minimum}-{maximum}."
-				: $"Found {matchCount} matches at '{JsonPath}', outside expected range {minimum}-{maximum}.");
+		return Scored(isInRange, string.Create(
+			CultureInfo.InvariantCulture,
+			$"Found {matchCount} matches at '{JsonPath}', {(isInRange ? "within" : "outside")} expected range {minimum}-{maximum}."));
 	}
 }

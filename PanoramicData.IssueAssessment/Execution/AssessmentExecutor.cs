@@ -21,30 +21,8 @@ internal static class AssessmentExecutor
 		ArgumentNullException.ThrowIfNull(assessment);
 
 		(double minPossibleRaw, double maxPossibleRaw) = ScoreCalculator.CalculateAssessmentRawRange(assessment);
-
-		AssessmentExecutionResult executionResult;
-		try
-		{
-			executionResult = await ExecuteDefinitionAsync(assessment, input, virtualExtension, cancellationToken).ConfigureAwait(false);
-		}
-		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-		{
-			executionResult = new AssessmentExecutionResult(
-				RawScore: null,
-				ExplanationText: "Assessment execution was canceled due to timeout.",
-				FailureReason: AssessmentFailureReason.TimeoutExceeded,
-				InnerException: null,
-				VirtualExtensionOutput: null);
-		}
-		catch (Exception exception)
-		{
-			executionResult = new AssessmentExecutionResult(
-				RawScore: null,
-				ExplanationText: "Assessment execution failed with an exception.",
-				FailureReason: AssessmentFailureReason.ThrowingException,
-				InnerException: exception,
-				VirtualExtensionOutput: null);
-		}
+		AssessmentExecutionResult executionResult = await RunAsync(assessment, input, virtualExtension, cancellationToken)
+			.ConfigureAwait(false);
 
 		double? normalizedScore = executionResult.RawScore.HasValue
 			? ScoreCalculator.Normalize(executionResult.RawScore.Value, minPossibleRaw, maxPossibleRaw)
@@ -76,6 +54,39 @@ internal static class AssessmentExecutor
 			AssessmentResult: assessmentResult,
 			Failure: failure,
 			VirtualDocument: executionResult.VirtualExtensionOutput);
+	}
+
+	/// <summary>
+	/// Runs the definition, turning a cancellation into a timeout result and any other exception into a failure result.
+	/// </summary>
+	private static async Task<AssessmentExecutionResult> RunAsync(
+		Assessment assessment,
+		JsonDocument input,
+		JsonDocument? virtualExtension,
+		CancellationToken cancellationToken)
+	{
+		try
+		{
+			return await ExecuteDefinitionAsync(assessment, input, virtualExtension, cancellationToken).ConfigureAwait(false);
+		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			return new AssessmentExecutionResult(
+				RawScore: null,
+				ExplanationText: "Assessment execution was canceled due to timeout.",
+				FailureReason: AssessmentFailureReason.TimeoutExceeded,
+				InnerException: null,
+				VirtualExtensionOutput: null);
+		}
+		catch (Exception exception)
+		{
+			return new AssessmentExecutionResult(
+				RawScore: null,
+				ExplanationText: "Assessment execution failed with an exception.",
+				FailureReason: AssessmentFailureReason.ThrowingException,
+				InnerException: exception,
+				VirtualExtensionOutput: null);
+		}
 	}
 
 	private static async Task<AssessmentExecutionResult> ExecuteDefinitionAsync(

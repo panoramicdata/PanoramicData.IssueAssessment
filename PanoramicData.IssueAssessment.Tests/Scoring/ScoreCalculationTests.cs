@@ -1,4 +1,5 @@
 using PanoramicData.IssueAssessment.Scoring;
+using PanoramicData.IssueAssessment.Tests.Integration;
 
 namespace PanoramicData.IssueAssessment.Tests.Scoring;
 
@@ -22,7 +23,7 @@ public class ScoreCalculationTests
 		{ new PatternCountAssessment { JsonPath = "$.a", Pattern = "x", SuccessScore = 9d, FailureScore = 5d }, 5d, 9d },
 		{ new JsonPathSelectorAssessment { JsonPath = "$.a", Evaluator = (_, _) => Task.FromResult(true), SuccessScore = 10d, FailureScore = 6d }, 6d, 10d },
 		{ new CustomCallbackAssessment { Callback = (_, _, _) => Task.FromResult<(double?, string, Exception?)>((1d, "", null)) }, 0d, 1d },
-		{ new UnknownDefinition(), 0d, 1d },
+		{ new StubDefinition(), 0d, 1d },
 	};
 
 	[Theory]
@@ -133,11 +134,5 @@ public class ScoreCalculationTests
 		(_, double? exponential, _) = ScoreCalculator.CalculateWeightedAverages([(0d, 1d), (0.2d, 1d), (0.9d, 1d)], exponentialDecay: 0d);
 
 		exponential.Should().Be(0.9d);
-	}
-
-	private sealed class UnknownDefinition : IAssessmentDefinition
-	{
-		public Task<AssessmentExecutionResult> ExecuteAsync(JsonDocument input, JsonDocument? virtualExtension, CancellationToken cancellationToken)
-			=> Task.FromResult(new AssessmentExecutionResult(1d, null, null, null, null));
 	}
 }

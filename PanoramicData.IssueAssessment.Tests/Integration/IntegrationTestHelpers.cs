@@ -206,3 +206,15 @@ internal sealed class RecordingCacheProvider(IAssessmentResult? cachedResult = n
 
 	public Task ClearAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }
+
+/// <summary>
+/// A series gate condition that fails with a configured exception.
+/// </summary>
+internal sealed class ThrowingGate(Exception exception) : ISeriesGateCondition
+{
+	public Task<bool> ShouldExecuteNextAsync(
+		CategoryResult priorCategoryResult,
+		ImmutableList<AssessmentFailure> priorFailures,
+		CancellationToken cancellationToken)
+		=> Task.FromException<bool>(exception);
+}

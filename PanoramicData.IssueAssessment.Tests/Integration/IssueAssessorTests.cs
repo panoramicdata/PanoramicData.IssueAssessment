@@ -76,12 +76,7 @@ public class IssueAssessorTests : TestBase
 	[Fact]
 	public async Task AssessManyAsync_NullSequence_Throws()
 	{
-		Func<Task> act = async () =>
-		{
-			await foreach (IAssessmentResult _ in new IssueAssessor(Options()).AssessManyAsync(null!, CancellationToken))
-			{
-			}
-		};
+		Func<Task> act = async () => await new IssueAssessor(Options()).AssessManyAsync(null!, CancellationToken).ToListAsync(CancellationToken);
 
 		await act.Should().ThrowAsync<ArgumentNullException>();
 	}
