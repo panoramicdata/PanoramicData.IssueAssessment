@@ -30,9 +30,25 @@ internal static class SeriesExecutor
 				if (previousCategory.SeriesGateCondition is not null)
 				{
 					CategoryResult priorResult = categories[index - 1];
-					bool shouldContinue = await previousCategory.SeriesGateCondition
-						.ShouldExecuteNextAsync(priorResult, failures.ToImmutableList(), cancellationToken)
-						.ConfigureAwait(false);
+					bool shouldContinue;
+					try
+					{
+						shouldContinue = await previousCategory.SeriesGateCondition
+							.ShouldExecuteNextAsync(priorResult, failures.ToImmutableList(), cancellationToken)
+							.ConfigureAwait(false);
+					}
+					catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+					{
+						// Like a cancelled assessment, a cancelled gate is recorded as a timeout so a global timeout yields a
+						// partial result; the assessor rethrows when the caller asked for the cancellation.
+						failures.Add(new AssessmentFailure(
+							CategoryName: previousCategory.Name,
+							AssessmentName: nameof(AssessmentCategory.SeriesGateCondition),
+							Reason: AssessmentFailureReason.TimeoutExceeded,
+							Message: $"Series gate condition of category '{previousCategory.Name}' was canceled due to timeout.",
+							InnerException: null));
+						break;
+					}
 
 					if (!shouldContinue)
 					{

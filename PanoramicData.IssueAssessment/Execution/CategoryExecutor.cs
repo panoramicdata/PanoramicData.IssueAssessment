@@ -26,44 +26,24 @@ internal static class CategoryExecutor
 			effectiveFailureHandling = defaultFailureHandling;
 		}
 
-		if (!category.CategoryTimeout.HasValue)
-		{
-			if (category.AssessmentExecutionStrategy == AssessmentExecutionStrategy.Parallel)
-			{
-				return await ExecuteParallelAsync(category, input, incomingVirtualDocument, effectiveFailureHandling, cancellationToken)
-					.ConfigureAwait(false);
-			}
+		// AssessmentExecutor records a cancelled assessment as a TimeoutExceeded result rather than throwing, so a category
+		// timeout surfaces as a timeout failure on each assessment it cut short and needs no handler of its own here.
+		using CancellationTokenSource? timeoutCts = category.CategoryTimeout.HasValue
+			? new CancellationTokenSource(category.CategoryTimeout.Value)
+			: null;
+		using CancellationTokenSource? linkedCts = timeoutCts is null
+			? null
+			: CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+		CancellationToken effectiveToken = linkedCts?.Token ?? cancellationToken;
 
-			return await ExecuteSeriesAsync(category, input, incomingVirtualDocument, effectiveFailureHandling, cancellationToken)
+		if (category.AssessmentExecutionStrategy == AssessmentExecutionStrategy.Parallel)
+		{
+			return await ExecuteParallelAsync(category, input, incomingVirtualDocument, effectiveFailureHandling, effectiveToken)
 				.ConfigureAwait(false);
 		}
 
-		using CancellationTokenSource timeoutCts = new(category.CategoryTimeout.Value);
-		using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-
-		try
-		{
-			if (category.AssessmentExecutionStrategy == AssessmentExecutionStrategy.Parallel)
-			{
-				return await ExecuteParallelAsync(category, input, incomingVirtualDocument, effectiveFailureHandling, linkedCts.Token)
-					.ConfigureAwait(false);
-			}
-
-			return await ExecuteSeriesAsync(category, input, incomingVirtualDocument, effectiveFailureHandling, linkedCts.Token)
-				.ConfigureAwait(false);
-		}
-		catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
-		{
-			AssessmentFailure failure = new(
-				CategoryName: category.Name,
-				AssessmentName: "CategoryTimeout",
-				Reason: AssessmentFailureReason.TimeoutExceeded,
-				Message: $"Category '{category.Name}' exceeded timeout of {category.CategoryTimeout.Value}.",
-				InnerException: null);
-
-			CategoryResult timeoutResult = BuildCategoryResult(category, ImmutableList<AssessmentResult>.Empty);
-			return (timeoutResult, ImmutableList.Create(failure), incomingVirtualDocument);
-		}
+		return await ExecuteSeriesAsync(category, input, incomingVirtualDocument, effectiveFailureHandling, effectiveToken)
+			.ConfigureAwait(false);
 	}
 
 	private static async Task<(CategoryResult Category, ImmutableList<AssessmentFailure> Failures, JsonDocument? VirtualDocument)> ExecuteSeriesAsync(
