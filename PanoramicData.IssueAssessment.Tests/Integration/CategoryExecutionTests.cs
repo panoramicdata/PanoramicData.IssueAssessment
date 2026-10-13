@@ -38,10 +38,7 @@ public class CategoryExecutionTests : TestBase
 			strategy,
 			CreateAssessment("A", new StubDefinition { RawScore = 1d }, weight: 3d),
 			CreateAssessment("B", new StubDefinition { RawScore = 0d }, weight: 1d));
-		using JsonDocument issue = ParseIssue();
-
-		(CategoryResult result, ImmutableList<AssessmentFailure> failures, JsonDocument? virtualDocument) =
-			await CategoryExecutor.ExecuteAsync(category, issue, null, FailureHandlingStrategy.CollectAll, CancellationToken);
+		(CategoryResult result, ImmutableList<AssessmentFailure> failures, JsonDocument? virtualDocument) = await ExecuteCategoryAsync(category);
 
 		failures.Should().BeEmpty();
 		virtualDocument.Should().BeNull();
@@ -61,10 +58,7 @@ public class CategoryExecutionTests : TestBase
 			"Category",
 			CreateAssessment("Scored", new StubDefinition { RawScore = 1d }),
 			CreateAssessment("Unscored", new StubDefinition { RawScore = null }));
-		using JsonDocument issue = ParseIssue();
-
-		(CategoryResult result, ImmutableList<AssessmentFailure> failures, _) =
-			await CategoryExecutor.ExecuteAsync(category, issue, null, FailureHandlingStrategy.CollectAll, CancellationToken);
+		(CategoryResult result, ImmutableList<AssessmentFailure> failures, _) = await ExecuteCategoryAsync(category);
 
 		failures.Should().BeEmpty("a null raw score without a failure reason is not a failure");
 		result.Assessments[1].Score.RawScore.Should().BeNull();
@@ -81,10 +75,7 @@ public class CategoryExecutionTests : TestBase
 			"Category",
 			CreateAssessment("Positive", new StubDefinition { RawScore = 1d }, weight: 2d),
 			CreateAssessment("Negative", new StubDefinition { RawScore = 1d }, weight: -1d));
-		using JsonDocument issue = ParseIssue();
-
-		(CategoryResult result, _, _) =
-			await CategoryExecutor.ExecuteAsync(category, issue, null, FailureHandlingStrategy.CollectAll, CancellationToken);
+		(CategoryResult result, _, _) = await ExecuteCategoryAsync(category);
 
 		result.Score.RawScore.Should().Be(1d);
 		result.Score.MinPossibleRaw.Should().Be(-1d);
@@ -98,10 +89,7 @@ public class CategoryExecutionTests : TestBase
 		AssessmentCategory category = CreateSeriesCategory(
 			"Category",
 			CreateAssessment("Zero", new StubDefinition { RawScore = 0d }, weight: 0d));
-		using JsonDocument issue = ParseIssue();
-
-		(CategoryResult result, _, _) =
-			await CategoryExecutor.ExecuteAsync(category, issue, null, FailureHandlingStrategy.CollectAll, CancellationToken);
+		(CategoryResult result, _, _) = await ExecuteCategoryAsync(category);
 
 		result.Score.RawScore.Should().Be(0d);
 		result.Score.MinPossibleRaw.Should().Be(0d);
@@ -114,10 +102,7 @@ public class CategoryExecutionTests : TestBase
 	{
 		// The options validator rejects an empty category; the executor still copes with one.
 		AssessmentCategory category = CreateSeriesCategory("Empty");
-		using JsonDocument issue = ParseIssue();
-
-		(CategoryResult result, ImmutableList<AssessmentFailure> failures, _) =
-			await CategoryExecutor.ExecuteAsync(category, issue, null, FailureHandlingStrategy.CollectAll, CancellationToken);
+		(CategoryResult result, ImmutableList<AssessmentFailure> failures, _) = await ExecuteCategoryAsync(category);
 
 		failures.Should().BeEmpty();
 		result.Assessments.Should().BeEmpty();
@@ -160,10 +145,7 @@ public class CategoryExecutionTests : TestBase
 			"Category",
 			CreateAssessment("A", definition),
 			CreateAssessment("B", definition));
-		using JsonDocument issue = ParseIssue();
-
-		(CategoryResult result, ImmutableList<AssessmentFailure> failures, _) =
-			await CategoryExecutor.ExecuteAsync(category, issue, null, FailureHandlingStrategy.CollectAll, CancellationToken);
+		(CategoryResult result, ImmutableList<AssessmentFailure> failures, _) = await ExecuteCategoryAsync(category);
 
 		failures.Should().BeEmpty("a series run would have waited for the first assessment forever");
 		result.Score.NormalizedScore.Should().Be(1d);
@@ -175,10 +157,7 @@ public class CategoryExecutionTests : TestBase
 		AssessmentCategory category = CreateSeriesCategory(
 			"Category",
 			CreateAssessment("Silent", new StubDefinition { Explanation = null }));
-		using JsonDocument issue = ParseIssue();
-
-		(CategoryResult result, _, _) =
-			await CategoryExecutor.ExecuteAsync(category, issue, null, FailureHandlingStrategy.CollectAll, CancellationToken);
+		(CategoryResult result, _, _) = await ExecuteCategoryAsync(category);
 
 		result.Assessments[0].ExplanationText.Should().BeEmpty();
 	}
@@ -189,10 +168,7 @@ public class CategoryExecutionTests : TestBase
 		AssessmentCategory category = CreateSeriesCategory(
 			"Category",
 			CreateAssessment("Presence", new PresenceAssessment { JsonPath = "$.title", PresentScore = 10d, AbsentScore = 2d }));
-		using JsonDocument issue = ParseIssue();
-
-		(CategoryResult result, _, _) =
-			await CategoryExecutor.ExecuteAsync(category, issue, null, FailureHandlingStrategy.CollectAll, CancellationToken);
+		(CategoryResult result, _, _) = await ExecuteCategoryAsync(category);
 
 		AssessmentScore score = result.Assessments[0].Score;
 		score.RawScore.Should().Be(10d);
@@ -231,4 +207,13 @@ public class CategoryExecutionTests : TestBase
 
 			return new AssessmentExecutionResult(1d, name, null, null, null);
 		});
+	/// <summary>
+	/// Runs <paramref name="category"/> with CollectAll against a ticket with only a title.
+	/// </summary>
+	private static async Task<(CategoryResult Category, ImmutableList<AssessmentFailure> Failures, JsonDocument? VirtualDocument)> ExecuteCategoryAsync(
+		AssessmentCategory category)
+	{
+		using JsonDocument issue = ParseIssue();
+		return await CategoryExecutor.ExecuteAsync(category, issue, null, FailureHandlingStrategy.CollectAll, TestContext.Current.CancellationToken);
+	}
 }

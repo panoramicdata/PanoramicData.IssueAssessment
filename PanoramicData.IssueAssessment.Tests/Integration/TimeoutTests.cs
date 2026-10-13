@@ -64,14 +64,11 @@ public class TimeoutTests : TestBase
 			CategoryTimeout = ShortTimeout,
 		};
 		AssessmentOptions options = CreateOptions(CategoryExecutionStrategy.Series, category);
-		IAssessmentResult result = await AssessAsync(options);
+		(IAssessmentResult result, AssessmentFailure failure) = await AssessExpectingSlowTimeoutAsync(options);
 
 		result.Categories.Should().ContainSingle();
 		result.Categories[0].Assessments.Should().HaveCount(2);
-		result.Failures.Should().ContainSingle();
-		result.Failures[0].AssessmentName.Should().Be("Slow");
-		result.Failures[0].Reason.Should().Be(AssessmentFailureReason.TimeoutExceeded);
-		result.Failures[0].Message.Should().Be("Assessment execution was canceled due to timeout.");
+		failure.Message.Should().Be("Assessment execution was canceled due to timeout.");
 		result.Categories[0].Score.RawScore.Should().BeNull("an assessment without a raw score leaves the category unscored");
 	}
 
@@ -120,12 +117,9 @@ public class TimeoutTests : TestBase
 		{
 			GlobalTimeout = ShortTimeout,
 		};
-		IAssessmentResult result = await AssessAsync(options);
+		(IAssessmentResult result, _) = await AssessExpectingSlowTimeoutAsync(options);
 
 		result.Categories.Should().HaveCount(2);
-		result.Failures.Should().ContainSingle();
-		result.Failures[0].AssessmentName.Should().Be("Slow");
-		result.Failures[0].Reason.Should().Be(AssessmentFailureReason.TimeoutExceeded);
 		result.Categories[1].Score.NormalizedScore.Should().Be(1d);
 	}
 
@@ -288,5 +282,17 @@ public class TimeoutTests : TestBase
 		Func<Task> act = () => new IssueAssessor(options).AssessAsync(issue, callerCts.Token);
 
 		await act.Should().ThrowAsync<OperationCanceledException>();
+	}
+	/// <summary>
+	/// Assesses and asserts the only failure is a timeout of the assessment named "Slow".
+	/// </summary>
+	private static async Task<(IAssessmentResult Result, AssessmentFailure Failure)> AssessExpectingSlowTimeoutAsync(AssessmentOptions options)
+	{
+		IAssessmentResult result = await AssessAsync(options);
+
+		AssessmentFailure failure = result.Failures.Should().ContainSingle().Subject;
+		failure.AssessmentName.Should().Be("Slow");
+		failure.Reason.Should().Be(AssessmentFailureReason.TimeoutExceeded);
+		return (result, failure);
 	}
 }

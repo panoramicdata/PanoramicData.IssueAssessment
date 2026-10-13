@@ -66,24 +66,26 @@ public class TextRangeAssessmentTests
 		result.ExplanationText.Should().Be($"Word count {words} at '$.text' is {relation} range 2-3.");
 	}
 
-	public static TheoryData<string> MissingValues => ["""{}""", """{"text":null}""", """{"text":42}""", """{"text":{"a":"b"}}"""];
-
-	[Theory]
-	[MemberData(nameof(MissingValues))]
-	public async Task StringLength_MissingOrNonString_ReturnsJsonPathNotFound(string json)
+	public static TheoryData<IAssessmentDefinition, string> MissingValues
 	{
-		AssessmentExecutionResult result = await ExecuteAsync(Length(), json);
+		get
+		{
+			TheoryData<IAssessmentDefinition, string> data = [];
+			foreach (string json in new[] { """{}""", """{"text":null}""", """{"text":42}""", """{"text":{"a":"b"}}""" })
+			{
+				data.Add(Length(), json);
+				data.Add(Words(), json);
+			}
 
-		result.RawScore.Should().Be(0.2d);
-		result.FailureReason.Should().Be(AssessmentFailureReason.JsonPathNotFound);
-		result.ExplanationText.Should().Be("String value was not found at '$.text'.");
+			return data;
+		}
 	}
 
 	[Theory]
 	[MemberData(nameof(MissingValues))]
-	public async Task WordCount_MissingOrNonString_ReturnsJsonPathNotFound(string json)
+	public async Task MissingOrNonString_ReturnsJsonPathNotFound(IAssessmentDefinition definition, string json)
 	{
-		AssessmentExecutionResult result = await ExecuteAsync(Words(), json);
+		AssessmentExecutionResult result = await ExecuteAsync(definition, json);
 
 		result.RawScore.Should().Be(0.2d);
 		result.FailureReason.Should().Be(AssessmentFailureReason.JsonPathNotFound);

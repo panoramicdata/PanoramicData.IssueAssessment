@@ -99,8 +99,14 @@ public class SeriesExecutionTests : TestBase
 		result.Categories.Should().ContainSingle().Which.Assessments.Should().ContainSingle();
 	}
 
-	[Fact]
-	public async Task CategoryCollectAll_OverridesOptionsFailFastWithinTheCategory()
+	[Theory]
+	[InlineData(FailureHandlingStrategy.CollectAll, FailureHandlingStrategy.FailFast, 1, 0)]
+	[InlineData(FailureHandlingStrategy.FailFast, FailureHandlingStrategy.CollectAll, 0, 1)]
+	public async Task CategoryFailureHandling_OverridesTheOptionsWithinTheCategoryOnly(
+		FailureHandlingStrategy categoryHandling,
+		FailureHandlingStrategy optionsHandling,
+		int afterFailureRuns,
+		int laterCategoryRuns)
 	{
 		StubDefinition afterFailure = new();
 		StubDefinition laterCategory = new();
@@ -108,38 +114,17 @@ public class SeriesExecutionTests : TestBase
 			CategoryExecutionStrategy.Series,
 			CreateSeriesCategory("First", CreateAssessment("A", Failing), CreateAssessment("B", afterFailure)) with
 			{
-				CategoryFailureHandling = FailureHandlingStrategy.CollectAll,
+				CategoryFailureHandling = categoryHandling,
 			},
 			CreateSeriesCategory("Second", CreateAssessment("C", laterCategory))) with
-		{ FailureHandling = FailureHandlingStrategy.FailFast };
+		{ FailureHandling = optionsHandling };
 
 		IAssessmentResult result = await AssessAsync(options);
 
-		afterFailure.ExecutionCount.Should().Be(1, "the category collects all its failures");
-		laterCategory.ExecutionCount.Should().Be(0, "the options still stop the series after a failing category");
+		afterFailure.ExecutionCount.Should().Be(afterFailureRuns, "the category's own setting decides within the category");
+		laterCategory.ExecutionCount.Should().Be(laterCategoryRuns, "the options' setting decides whether the series stops");
 		result.Failures.Should().ContainSingle();
 	}
-
-	[Fact]
-	public async Task CategoryFailFast_OverridesOptionsCollectAll()
-	{
-		StubDefinition afterFailure = new();
-		StubDefinition laterCategory = new();
-		AssessmentOptions options = CreateOptions(
-			CategoryExecutionStrategy.Series,
-			CreateSeriesCategory("First", CreateAssessment("A", Failing), CreateAssessment("B", afterFailure)) with
-			{
-				CategoryFailureHandling = FailureHandlingStrategy.FailFast,
-			},
-			CreateSeriesCategory("Second", CreateAssessment("C", laterCategory)));
-
-		IAssessmentResult result = await AssessAsync(options);
-
-		afterFailure.ExecutionCount.Should().Be(0);
-		laterCategory.ExecutionCount.Should().Be(1, "the options collect all, so later categories still run");
-		result.Categories.Should().HaveCount(2);
-	}
-
 	[Fact]
 	public async Task VirtualOutput_IsStoredUnderItsNameAndReadByLaterBuiltInAssessments()
 	{
@@ -194,13 +179,9 @@ public class SeriesExecutionTests : TestBase
 		StubDefinition observer = new();
 		AssessmentOptions options = CreateOptions(
 			CategoryExecutionStrategy.Series,
-			CreateSeriesCategory("One", CreateAssessment("Producer", producer), CreateAssessment("Observer", observer))) with
-		{ CaptureVirtualDocument = true };
+			CreateSeriesCategory("One", CreateAssessment("Producer", producer), CreateAssessment("Observer", observer)));
 
-		IAssessmentResult result = await AssessAsync(options);
-
-		observer.ReceivedVirtualExtensions.Should().Equal([null]);
-		result.VirtualDocument.Should().BeNull();
+		await ShouldNotShareExtensionAsync(options, observer);
 	}
 
 	[Fact]
@@ -222,10 +203,17 @@ public class SeriesExecutionTests : TestBase
 		AssessmentOptions options = CreateOptions(
 			CategoryExecutionStrategy.Parallel,
 			CreateSeriesCategory("One", CreateAssessment("Producer", new StubDefinition { VirtualOutputJson = "1" }, virtualOutputName: "v")),
-			CreateSeriesCategory("Two", CreateAssessment("Observer", observer))) with
-		{ CaptureVirtualDocument = true };
+			CreateSeriesCategory("Two", CreateAssessment("Observer", observer)));
 
-		IAssessmentResult result = await AssessAsync(options);
+		await ShouldNotShareExtensionAsync(options, observer);
+	}
+	/// <summary>
+	/// Assesses with the virtual document captured, and asserts <paramref name="observer"/> received no extension and
+	/// none was captured.
+	/// </summary>
+	private static async Task ShouldNotShareExtensionAsync(AssessmentOptions options, StubDefinition observer)
+	{
+		IAssessmentResult result = await AssessAsync(options with { CaptureVirtualDocument = true });
 
 		observer.ReceivedVirtualExtensions.Should().Equal([null]);
 		result.VirtualDocument.Should().BeNull();
