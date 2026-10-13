@@ -94,7 +94,9 @@ public sealed record NumericRangeAssessment : IAssessmentDefinition, IJsonPathAs
 	{
 		if (value.ValueKind == JsonValueKind.Number)
 		{
-			return value.TryGetDouble(out actualValue) && double.IsFinite(actualValue);
+			// A JSON number always converts; one too large for a double becomes infinity, which is rejected.
+			actualValue = value.GetDouble();
+			return double.IsFinite(actualValue);
 		}
 
 		if (value.ValueKind == JsonValueKind.String)

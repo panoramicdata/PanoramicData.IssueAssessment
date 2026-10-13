@@ -60,7 +60,7 @@ public sealed record PatternCountAssessment : IAssessmentDefinition, IJsonPathAs
 			return Task.FromResult(missingResult);
 		}
 
-		string text = value.GetString() ?? string.Empty;
+		string text = value.GetString()!;
 		int matchCount = RegexCache.GetOrAdd(Pattern).Count(text);
 
 		bool meetsMinimum = !MinMatches.HasValue || matchCount >= MinMatches.Value;

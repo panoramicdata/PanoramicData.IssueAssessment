@@ -55,7 +55,7 @@ public sealed record WordCountAssessment : IAssessmentDefinition, IJsonPathAsses
 			return Task.FromResult(missingResult);
 		}
 
-		string text = value.GetString() ?? string.Empty;
+		string text = value.GetString()!;
 		int wordCount = CountWords(text);
 		bool isInRange = wordCount >= MinimumWordCount && wordCount <= MaximumWordCount;
 

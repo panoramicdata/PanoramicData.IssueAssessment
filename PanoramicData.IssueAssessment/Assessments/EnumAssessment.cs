@@ -50,7 +50,7 @@ public sealed record EnumAssessment : IAssessmentDefinition, IJsonPathAssessment
 			return Task.FromResult(missingResult);
 		}
 
-		string candidate = value.GetString() ?? string.Empty;
+		string candidate = value.GetString()!;
 		bool isAllowed = AllowedValues.Contains(candidate);
 
 		AssessmentExecutionResult result = new(

@@ -57,7 +57,7 @@ public sealed record PresenceAssessment : IAssessmentDefinition, IJsonPathAssess
 
 	private static bool IsMissingValue(JsonElement element)
 	{
-		if (element.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+		if (element.ValueKind == JsonValueKind.Null)
 		{
 			return true;
 		}

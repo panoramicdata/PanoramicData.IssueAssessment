@@ -50,7 +50,7 @@ public sealed record RegexAssessment : IAssessmentDefinition, IJsonPathAssessmen
 			return Task.FromResult(missingResult);
 		}
 
-		string text = value.GetString() ?? string.Empty;
+		string text = value.GetString()!;
 		bool isMatch = RegexCache.GetOrAdd(Pattern).IsMatch(text);
 
 		AssessmentExecutionResult result = new(

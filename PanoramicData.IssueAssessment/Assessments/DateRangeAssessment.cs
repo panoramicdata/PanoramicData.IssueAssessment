@@ -62,7 +62,7 @@ public sealed record DateRangeAssessment : IAssessmentDefinition, IJsonPathAsses
 			return Task.FromResult(missingResult);
 		}
 
-		string text = value.GetString() ?? string.Empty;
+		string text = value.GetString()!;
 		if (!TryParseDate(text, out DateTime actualDate))
 		{
 			AssessmentExecutionResult parseFailureResult = new(
