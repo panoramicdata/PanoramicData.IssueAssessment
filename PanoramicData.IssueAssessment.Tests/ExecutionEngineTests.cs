@@ -149,7 +149,8 @@ public class ExecutionEngineTests
 	{
 		public async Task<AssessmentExecutionResult> ExecuteAsync(JsonDocument input, JsonDocument? virtualExtension, CancellationToken cancellationToken)
 		{
-			await Task.Delay(TimeSpan.FromMilliseconds(150), cancellationToken);
+			// Waits until cancelled, so only the timeout under test can end it; a fixed delay races the timeout under load.
+			await Task.Delay(Timeout.Infinite, cancellationToken);
 			return new AssessmentExecutionResult(1d, "ok", null, null, null);
 		}
 	}
