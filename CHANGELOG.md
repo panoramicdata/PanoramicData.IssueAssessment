@@ -5,7 +5,7 @@ All notable changes to this project are documented here. The format follows
 [Semantic Versioning](https://semver.org/). Versions are `major.minor.height`, where the height comes from
 Nerdbank.GitVersioning.
 
-## [1.0] - Unreleased
+## [1.0.19] - 2026-10-13
 
 First release.
 

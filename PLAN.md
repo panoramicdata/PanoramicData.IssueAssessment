@@ -1,6 +1,6 @@
 # PanoramicData.IssueAssessment — Implementation Plan
 
-**Status:** Phases 0–7 complete; Phase 8 (publishing) waits on repository creation and nuget.org trusted publishing.
+**Status:** Phases 0–8 complete. 1.0.19 published to nuget.org on 2026-10-13; governance 92/93 (CQ-06, informational: six test files graded B for duplication).
 **Updated:** 2026-10-13
 
 The design is in [DESIGN.md](DESIGN.md). This file tracks what has been done and what is left.
@@ -17,7 +17,7 @@ The design is in [DESIGN.md](DESIGN.md). This file tracks what has been done and
 | 5 | Caching: in-memory cache and cache keys | ✅ |
 | 6 | Test suite | ✅ 545 tests; 100% line coverage, 99.8% branch coverage |
 | 7 | Documentation, examples, calibration, release notes | ✅ |
-| 8 | GitHub repository, Codacy, NuGet publishing | ⏳ Blocked: needs the repository created and trusted publishing configured |
+| 8 | GitHub repository, Codacy, NuGet publishing | ✅ 1.0.19 on nuget.org; Codacy grade A, 0 issues, 100% coverage |
 | 9 | Consuming repositories | ⏳ Optional; after publishing |
 
 ## Phase 0: Repository
@@ -78,16 +78,16 @@ The design is in [DESIGN.md](DESIGN.md). This file tracks what has been done and
 
 Needs, in order:
 
-1. [ ] Create the repository: `gh repo create panoramicdata/PanoramicData.IssueAssessment --public --source . --push`
-2. [ ] Enable private vulnerability reporting:
+1. [x] Create the repository: `gh repo create panoramicdata/PanoramicData.IssueAssessment --public --source . --push`
+2. [x] Enable private vulnerability reporting:
        `gh api -X PUT repos/panoramicdata/PanoramicData.IssueAssessment/private-vulnerability-reporting`
-3. [ ] Add the repository to Codacy and set the `CODACY_PROJECT_TOKEN` secret (codacy skill: `add-repo`, then
+3. [x] Add the repository to Codacy and set the `CODACY_PROJECT_TOKEN` secret (codacy skill: `add-repo`, then
        `create-repo-token --set-github-secret`)
-4. [ ] Check CI and CodeQL are green
-5. [ ] On nuget.org, add a trusted publishing policy: GitHub Actions, owner `panoramicdata`, repository
+4. [x] Check CI and CodeQL are green
+5. [x] On nuget.org, add a trusted publishing policy: GitHub Actions, owner `panoramicdata`, repository
        `PanoramicData.IssueAssessment`, workflow `ci.yml`, no environment
-6. [ ] Run the NugetManagement governance assessment and fix what it reports
-7. [ ] `./Publish.ps1` on a clean, synced `main`; confirm the version on nuget.org
+6. [x] Run the NugetManagement governance assessment and fix what it reports
+7. [x] `./Publish.ps1` on a clean, synced `main`; confirm the version on nuget.org
 
 ## Phase 9: Consumers (optional)
 
