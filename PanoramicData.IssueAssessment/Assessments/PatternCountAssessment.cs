@@ -32,7 +32,7 @@ public sealed record PatternCountAssessment : IAssessmentDefinition, IJsonPathAs
 	/// <summary>
 	/// Gets the score returned when match count is outside range.
 	/// </summary>
-	public double FailureScore { get; init; } = 0d;
+	public double FailureScore { get; init; }
 
 	/// <summary>
 	/// Gets an optional explanation template.
@@ -61,7 +61,7 @@ public sealed record PatternCountAssessment : IAssessmentDefinition, IJsonPathAs
 		}
 
 		string text = value.GetString() ?? string.Empty;
-		int matchCount = RegexCache.GetOrAdd(Pattern).Matches(text).Count;
+		int matchCount = RegexCache.GetOrAdd(Pattern).Count(text);
 
 		bool meetsMinimum = !MinMatches.HasValue || matchCount >= MinMatches.Value;
 		bool meetsMaximum = !MaxMatches.HasValue || matchCount <= MaxMatches.Value;
@@ -85,8 +85,8 @@ public sealed record PatternCountAssessment : IAssessmentDefinition, IJsonPathAs
 
 	private string BuildRangeExplanation(int matchCount, bool isInRange)
 	{
-		string minimum = MinMatches?.ToString() ?? "0";
-		string maximum = MaxMatches?.ToString() ?? "+inf";
+		string minimum = MinMatches?.ToString(CultureInfo.InvariantCulture) ?? "0";
+		string maximum = MaxMatches?.ToString(CultureInfo.InvariantCulture) ?? "+inf";
 
 		return ExplanationTemplate
 			?? (isInRange

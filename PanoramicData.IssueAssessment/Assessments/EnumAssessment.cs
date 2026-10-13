@@ -22,7 +22,7 @@ public sealed record EnumAssessment : IAssessmentDefinition, IJsonPathAssessment
 	/// <summary>
 	/// Gets the score returned when the value is not allowed.
 	/// </summary>
-	public double FailureScore { get; init; } = 0d;
+	public double FailureScore { get; init; }
 
 	/// <summary>
 	/// Gets an optional explanation template.

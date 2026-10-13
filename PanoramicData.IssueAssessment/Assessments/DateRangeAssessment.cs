@@ -1,6 +1,5 @@
 namespace PanoramicData.IssueAssessment.Assessments;
 
-using System.Globalization;
 
 /// <summary>
 /// Assesses whether a selected date value falls within an inclusive date range.
@@ -35,7 +34,7 @@ public sealed record DateRangeAssessment : IAssessmentDefinition, IJsonPathAsses
 	/// <summary>
 	/// Gets the score returned when the date is out of range.
 	/// </summary>
-	public double FailureScore { get; init; } = 0d;
+	public double FailureScore { get; init; }
 
 	/// <summary>
 	/// Gets an optional explanation template.

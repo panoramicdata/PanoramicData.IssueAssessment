@@ -17,7 +17,7 @@ public sealed record PresenceAssessment : IAssessmentDefinition, IJsonPathAssess
 	/// <summary>
 	/// Gets the score returned when a value is absent.
 	/// </summary>
-	public double AbsentScore { get; init; } = 0d;
+	public double AbsentScore { get; init; }
 
 	/// <summary>
 	/// Gets an optional explanation template.

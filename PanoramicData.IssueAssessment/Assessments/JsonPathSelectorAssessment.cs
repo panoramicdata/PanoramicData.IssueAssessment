@@ -22,7 +22,7 @@ public sealed record JsonPathSelectorAssessment : IAssessmentDefinition, IJsonPa
 	/// <summary>
 	/// Gets the score returned when evaluator fails.
 	/// </summary>
-	public double FailureScore { get; init; } = 0d;
+	public double FailureScore { get; init; }
 
 	/// <summary>
 	/// Gets an optional explanation template.

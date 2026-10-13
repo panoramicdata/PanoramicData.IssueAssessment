@@ -1,4 +1,5 @@
 global using System.Collections.Immutable;
+global using System.Globalization;
 global using System.Text.Json;
 global using PanoramicData.IssueAssessment.Assessments;
 global using PanoramicData.IssueAssessment.Configuration;

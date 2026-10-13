@@ -35,8 +35,10 @@ public sealed record CustomCallbackAssessment : IAssessmentDefinition
 				InnerException: exception,
 				VirtualExtensionOutput: null);
 		}
-		catch (Exception exception)
+		catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
 		{
+			// A cancellation the token asked for propagates, so the executor reports it as a timeout or cancellation
+			// rather than as a failure of the callback itself.
 			return new AssessmentExecutionResult(
 				RawScore: null,
 				ExplanationText: BuildExceptionExplanation(),

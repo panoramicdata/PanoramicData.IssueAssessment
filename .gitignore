@@ -53,3 +53,6 @@ publish/
 
 # Local environment
 .env.local
+
+# Secrets
+nuget-key.txt

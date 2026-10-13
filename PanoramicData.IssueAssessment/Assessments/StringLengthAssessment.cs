@@ -27,7 +27,7 @@ public sealed record StringLengthAssessment : IAssessmentDefinition, IJsonPathAs
 	/// <summary>
 	/// Gets the score returned when the value length falls outside the range.
 	/// </summary>
-	public double FailureScore { get; init; } = 0d;
+	public double FailureScore { get; init; }
 
 	/// <summary>
 	/// Gets an optional explanation template.

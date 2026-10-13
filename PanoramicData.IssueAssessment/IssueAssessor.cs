@@ -35,6 +35,7 @@ public class IssueAssessor
 	/// <param name="cancellationToken">Cancellation token.</param>
 	/// <returns>The assessment result.</returns>
 	/// <exception cref="ArgumentNullException">Thrown when <paramref name="issue"/> is null.</exception>
+	/// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/> is canceled.</exception>
 	public async Task<IAssessmentResult> AssessAsync(JsonDocument issue, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(issue);
@@ -59,6 +60,10 @@ public class IssueAssessor
 		ExecutionResult executionResult = _options.ExecutionStrategy == CategoryExecutionStrategy.Parallel
 			? await ParallelExecutor.ExecuteAsync(_options, issue, linkedCts.Token).ConfigureAwait(false)
 			: await SeriesExecutor.ExecuteAsync(_options, issue, linkedCts.Token).ConfigureAwait(false);
+
+		// Executors record a cancelled assessment as a timeout failure so that the global timeout yields a partial
+		// result. Cancellation requested by the caller is not a timeout: surface it rather than return that result.
+		cancellationToken.ThrowIfCancellationRequested();
 
 		AssessmentAggregations aggregations = AggregationCalculator.Calculate(executionResult.Categories);
 		JsonDocument? virtualDocument = _options.CaptureVirtualDocument ? executionResult.VirtualDocument : null;

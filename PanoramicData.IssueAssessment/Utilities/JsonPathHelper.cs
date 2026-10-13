@@ -127,7 +127,7 @@ public static class JsonPathHelper
 			return new PathToken(segment, null);
 		}
 
-		if (!segment.EndsWith("]", StringComparison.Ordinal))
+		if (!segment.EndsWith(']'))
 		{
 			throw new InvalidJsonPathException($"JSONPath segment '{segment}' has a malformed array index.");
 		}

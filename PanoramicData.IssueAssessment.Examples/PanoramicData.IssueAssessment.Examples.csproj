@@ -1,13 +1,22 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <RootNamespace>PanoramicData.IssueAssessment.Examples</RootNamespace>
-    <AssemblyName>PanoramicData.IssueAssessment.Examples</AssemblyName>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<NeutralResourcesLanguage>en</NeutralResourcesLanguage>
+		<OutputType>Exe</OutputType>
+		<IsPackable>false</IsPackable>
+		<GenerateDocumentationFile>false</GenerateDocumentationFile>
+		<!-- CA1303: the examples print literal text to the console. -->
+		<NoWarn>$(NoWarn);CA1303</NoWarn>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\PanoramicData.IssueAssessment\PanoramicData.IssueAssessment.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<None Include="Fixtures\*.json" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\PanoramicData.IssueAssessment\PanoramicData.IssueAssessment.csproj" />
+	</ItemGroup>
 
 </Project>
