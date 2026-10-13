@@ -89,23 +89,28 @@ public sealed record DateRangeAssessment : IAssessmentDefinition, IJsonPathAsses
 		return Task.FromResult(result);
 	}
 
+	private bool HasFormat => !string.IsNullOrWhiteSpace(DateFormat);
+
+	/// <summary>
+	/// The format used to write dates into explanations: the configured format, or the sortable format when parsing is
+	/// flexible.
+	/// </summary>
+	private string DisplayFormat => HasFormat ? DateFormat : "s";
+
 	private bool TryParseDate(string value, out DateTime date)
 	{
-		if (string.IsNullOrWhiteSpace(DateFormat))
+		bool parsed = HasFormat
+			? DateTime.TryParseExact(value, DateFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out date)
+			: DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out date);
+
+		// RoundtripKind converts a value carrying an offset (+01:30) to the machine's local time. Compare it as UTC
+		// instead, so the result does not depend on the time zone of the machine running the assessment.
+		if (parsed && date.Kind == DateTimeKind.Local)
 		{
-			return DateTime.TryParse(
-				value,
-				CultureInfo.InvariantCulture,
-				DateTimeStyles.RoundtripKind,
-				out date);
+			date = date.ToUniversalTime();
 		}
 
-		return DateTime.TryParseExact(
-			value,
-			DateFormat,
-			CultureInfo.InvariantCulture,
-			DateTimeStyles.RoundtripKind,
-			out date);
+		return parsed;
 	}
 
 	private string BuildMissingExplanation()
@@ -117,14 +122,16 @@ public sealed record DateRangeAssessment : IAssessmentDefinition, IJsonPathAsses
 	private string BuildParseFailureExplanation(string value)
 	{
 		return ExplanationTemplate
-			?? $"Date value '{value}' at '{JsonPath}' could not be parsed with format '{DateFormat}'.";
+			?? (HasFormat
+				? $"Date value '{value}' at '{JsonPath}' could not be parsed with format '{DateFormat}'."
+				: $"Date value '{value}' at '{JsonPath}' could not be parsed as a date.");
 	}
 
 	private string BuildRangeExplanation(DateTime date, bool isInRange)
 	{
-		string minimum = MinDate?.ToString(DateFormat, CultureInfo.InvariantCulture) ?? "-inf";
-		string maximum = MaxDate?.ToString(DateFormat, CultureInfo.InvariantCulture) ?? "+inf";
-		string actual = date.ToString(DateFormat, CultureInfo.InvariantCulture);
+		string minimum = MinDate?.ToString(DisplayFormat, CultureInfo.InvariantCulture) ?? "-inf";
+		string maximum = MaxDate?.ToString(DisplayFormat, CultureInfo.InvariantCulture) ?? "+inf";
+		string actual = date.ToString(DisplayFormat, CultureInfo.InvariantCulture);
 
 		return ExplanationTemplate
 			?? (isInRange

@@ -94,16 +94,18 @@ public sealed record NumericRangeAssessment : IAssessmentDefinition, IJsonPathAs
 	{
 		if (value.ValueKind == JsonValueKind.Number)
 		{
-			return value.TryGetDouble(out actualValue);
+			return value.TryGetDouble(out actualValue) && double.IsFinite(actualValue);
 		}
 
 		if (value.ValueKind == JsonValueKind.String)
 		{
+			// "NaN", "Infinity" and out-of-range values parse, but are not numbers a range can meaningfully contain.
 			return double.TryParse(
 				value.GetString(),
 				NumberStyles.Float | NumberStyles.AllowThousands,
 				CultureInfo.InvariantCulture,
-				out actualValue);
+				out actualValue)
+				&& double.IsFinite(actualValue);
 		}
 
 		actualValue = default;
