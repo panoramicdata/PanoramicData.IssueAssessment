@@ -59,8 +59,10 @@ public sealed record JsonPathSelectorAssessment : IAssessmentDefinition, IJsonPa
 				InnerException: null,
 				VirtualExtensionOutput: null);
 		}
-		catch (Exception exception)
+		catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
 		{
+			// A cancellation the token asked for propagates, so the executor reports it as a timeout or cancellation
+			// rather than as a failure of the evaluator itself.
 			return new AssessmentExecutionResult(
 				RawScore: FailureScore,
 				ExplanationText: BuildEvaluatorExceptionExplanation(),
