@@ -46,7 +46,7 @@ public sealed record NumericRangeAssessment : IAssessmentDefinition, IJsonPathAs
 		ArgumentNullException.ThrowIfNull(input);
 		cancellationToken.ThrowIfCancellationRequested();
 
-		if (!JsonPathHelper.TrySelect(input, JsonPath, out JsonElement value) || !TryGetNumericValue(value, out double actualValue))
+		if (!JsonPathHelper.TrySelect(input, virtualExtension, JsonPath, out JsonElement value) || !TryGetNumericValue(value, out double actualValue))
 		{
 			AssessmentExecutionResult missingResult = new(
 				RawScore: FailureScore,

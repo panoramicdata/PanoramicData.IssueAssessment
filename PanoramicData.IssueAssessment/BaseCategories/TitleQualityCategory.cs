@@ -46,6 +46,22 @@ public static class TitleQualityCategory
 						SuccessScore = 1.0d,
 						FailureScore = 0.0d,
 					},
+				},
+				new Assessment
+				{
+					Name = "Title Word Count",
+					Description = "Checks the title has enough words to say what is wrong or wanted.",
+					Weight = 1.0d,
+					// Calibrated on real GitHub issues: one- and two-word titles ("Problems", "Doesn't work") are
+					// placeholders, while useful titles name both a component and a symptom.
+					Definition = new WordCountAssessment
+					{
+						JsonPath = "$.title",
+						MinimumWordCount = 3,
+						MaximumWordCount = 30,
+						SuccessScore = 1.0d,
+						FailureScore = 0.0d,
+					},
 				}),
 		};
 	}

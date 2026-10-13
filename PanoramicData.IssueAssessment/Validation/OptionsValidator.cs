@@ -32,6 +32,26 @@ public static class OptionsValidator
 		{
 			ValidateCategory(category);
 		}
+
+		// Results are keyed by category name, and virtual outputs by VirtualOutputName: a duplicate would collide at
+		// assessment time, so reject it here.
+		string? duplicateCategory = options.Categories
+			.GroupBy(category => category.Name, StringComparer.Ordinal)
+			.FirstOrDefault(group => group.Count() > 1)?.Key;
+		if (duplicateCategory is not null)
+		{
+			throw new ArgumentException($"Category name '{duplicateCategory}' is used more than once.", nameof(options));
+		}
+
+		string? duplicateOutput = options.Categories
+			.SelectMany(category => category.Assessments)
+			.Where(assessment => assessment.AllowVirtualExtension)
+			.GroupBy(assessment => assessment.VirtualOutputName, StringComparer.Ordinal)
+			.FirstOrDefault(group => group.Count() > 1)?.Key;
+		if (duplicateOutput is not null)
+		{
+			throw new ArgumentException($"VirtualOutputName '{duplicateOutput}' is used by more than one assessment.", nameof(options));
+		}
 	}
 
 	private static void ValidateCategory(AssessmentCategory category)

@@ -33,7 +33,7 @@ public sealed record PresenceAssessment : IAssessmentDefinition, IJsonPathAssess
 		ArgumentNullException.ThrowIfNull(input);
 		cancellationToken.ThrowIfCancellationRequested();
 
-		bool found = JsonPathHelper.TrySelect(input, JsonPath, out JsonElement value);
+		bool found = JsonPathHelper.TrySelect(input, virtualExtension, JsonPath, out JsonElement value);
 		bool isPresent = found && !IsMissingValue(value);
 		double score = isPresent ? PresentScore : AbsentScore;
 

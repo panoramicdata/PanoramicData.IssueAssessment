@@ -44,6 +44,20 @@ public static class JsonPathHelper
 		return true;
 	}
 
+	/// <summary>
+	/// Attempts to select a value from the issue document and, when the issue does not contain it, from the virtual
+	/// extension produced by earlier assessments in a series.
+	/// </summary>
+	/// <param name="document">Source issue document.</param>
+	/// <param name="virtualExtension">Virtual extension document, or null when there is none.</param>
+	/// <param name="jsonPath">JSONPath selector.</param>
+	/// <param name="result">Selected element when found.</param>
+	/// <returns><see langword="true"/> when the value is found in either document, otherwise <see langword="false"/>.</returns>
+	/// <remarks>The issue wins: a virtual extension adds values but never overrides the issue's own.</remarks>
+	public static bool TrySelect(JsonDocument document, JsonDocument? virtualExtension, string jsonPath, out JsonElement result)
+		=> TrySelect(document, jsonPath, out result)
+			|| (virtualExtension is not null && TrySelect(virtualExtension, jsonPath, out result));
+
 	private static bool TryApplyToken(JsonElement current, PathToken token, out JsonElement next)
 	{
 		if (token.PropertyName is { Length: > 0 })

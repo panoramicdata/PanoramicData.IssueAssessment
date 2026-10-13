@@ -43,7 +43,7 @@ public sealed record WordCountAssessment : IAssessmentDefinition, IJsonPathAsses
 		ArgumentNullException.ThrowIfNull(input);
 		cancellationToken.ThrowIfCancellationRequested();
 
-		if (!JsonPathHelper.TrySelect(input, JsonPath, out JsonElement value) || value.ValueKind != JsonValueKind.String)
+		if (!JsonPathHelper.TrySelect(input, virtualExtension, JsonPath, out JsonElement value) || value.ValueKind != JsonValueKind.String)
 		{
 			AssessmentExecutionResult missingResult = new(
 				RawScore: FailureScore,

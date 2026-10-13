@@ -78,7 +78,10 @@ internal static class CategoryExecutor
 
 			if (assessment.AllowVirtualExtension && item.VirtualDocument is not null)
 			{
-				virtualDocument = VirtualDocumentFinalizer.Merge(virtualDocument, item.VirtualDocument);
+				// The output is stored under the assessment's VirtualOutputName, so later assessments read it as
+				// $.<VirtualOutputName>. The validator guarantees names are unique, so outputs never collide.
+				using JsonDocument named = VirtualDocumentFinalizer.Wrap(assessment.VirtualOutputName!, item.VirtualDocument);
+				virtualDocument = VirtualDocumentFinalizer.Merge(virtualDocument, named);
 			}
 		}
 

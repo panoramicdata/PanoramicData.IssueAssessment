@@ -38,7 +38,7 @@ public sealed record JsonPathSelectorAssessment : IAssessmentDefinition, IJsonPa
 		ArgumentNullException.ThrowIfNull(input);
 		cancellationToken.ThrowIfCancellationRequested();
 
-		if (!JsonPathHelper.TrySelect(input, JsonPath, out JsonElement value))
+		if (!JsonPathHelper.TrySelect(input, virtualExtension, JsonPath, out JsonElement value))
 		{
 			return new AssessmentExecutionResult(
 				RawScore: FailureScore,
