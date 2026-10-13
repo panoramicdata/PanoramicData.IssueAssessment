@@ -20,11 +20,7 @@ internal static class CategoryExecutor
 		ArgumentNullException.ThrowIfNull(category);
 		ArgumentNullException.ThrowIfNull(input);
 
-		FailureHandlingStrategy effectiveFailureHandling = category.CategoryFailureHandling;
-		if (effectiveFailureHandling != FailureHandlingStrategy.FailFast && effectiveFailureHandling != FailureHandlingStrategy.CollectAll)
-		{
-			effectiveFailureHandling = defaultFailureHandling;
-		}
+		FailureHandlingStrategy effectiveFailureHandling = category.CategoryFailureHandling ?? defaultFailureHandling;
 
 		// AssessmentExecutor records a cancelled assessment as a TimeoutExceeded result rather than throwing, so a category
 		// timeout surfaces as a timeout failure on each assessment it cut short and needs no handler of its own here.

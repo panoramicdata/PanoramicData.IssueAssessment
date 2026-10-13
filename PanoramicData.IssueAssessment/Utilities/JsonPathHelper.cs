@@ -60,16 +60,14 @@ public static class JsonPathHelper
 
 	private static bool TryApplyToken(JsonElement current, PathToken token, out JsonElement next)
 	{
-		if (token.PropertyName is { Length: > 0 })
+		// Parse guarantees every token names a property, and that any array index is non-negative.
+		if (current.ValueKind != JsonValueKind.Object || !current.TryGetProperty(token.PropertyName, out JsonElement property))
 		{
-			if (current.ValueKind != JsonValueKind.Object || !current.TryGetProperty(token.PropertyName, out JsonElement property))
-			{
-				next = default;
-				return false;
-			}
-
-			current = property;
+			next = default;
+			return false;
 		}
+
+		current = property;
 
 		if (token.ArrayIndex is null)
 		{
@@ -84,7 +82,7 @@ public static class JsonPathHelper
 		}
 
 		int index = token.ArrayIndex.Value;
-		if (index < 0 || index >= current.GetArrayLength())
+		if (index >= current.GetArrayLength())
 		{
 			next = default;
 			return false;
@@ -154,14 +152,10 @@ public static class JsonPathHelper
 			throw new InvalidJsonPathException($"JSONPath segment '{segment}' is missing a property name.");
 		}
 
+		// NumberStyles.None accepts digits only, so signs (including a negative index) and whitespace are rejected here.
 		if (!int.TryParse(indexText, NumberStyles.None, CultureInfo.InvariantCulture, out int index))
 		{
 			throw new InvalidJsonPathException($"JSONPath segment '{segment}' contains a non-numeric array index.");
-		}
-
-		if (index < 0)
-		{
-			throw new InvalidJsonPathException($"JSONPath segment '{segment}' contains a negative array index.");
 		}
 
 		return new PathToken(propertyName, index);

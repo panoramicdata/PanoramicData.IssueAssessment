@@ -28,7 +28,7 @@ public static class ScoreCalculator
 			EnumAssessment enumAssessment => ToRange(enumAssessment.SuccessScore, enumAssessment.FailureScore),
 			PatternCountAssessment patternCount => ToRange(patternCount.SuccessScore, patternCount.FailureScore),
 			JsonPathSelectorAssessment selector => ToRange(selector.SuccessScore, selector.FailureScore),
-			CustomCallbackAssessment => (DefaultUnknownMinimum, DefaultUnknownMaximum),
+			// Callbacks and custom definitions declare no bounds, so their raw scores are taken to lie in [0, 1].
 			_ => (DefaultUnknownMinimum, DefaultUnknownMaximum),
 		};
 	}

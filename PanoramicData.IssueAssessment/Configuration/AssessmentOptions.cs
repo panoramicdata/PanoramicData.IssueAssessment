@@ -61,9 +61,10 @@ public sealed record AssessmentCategory
 	public TimeSpan? CategoryTimeout { get; init; }
 
 	/// <summary>
-	/// Gets category-specific failure handling strategy.
+	/// Gets the failure handling strategy for the assessments in this category, or null (the default) to use
+	/// <see cref="AssessmentOptions.FailureHandling"/>.
 	/// </summary>
-	public FailureHandlingStrategy CategoryFailureHandling { get; init; } = FailureHandlingStrategy.CollectAll;
+	public FailureHandlingStrategy? CategoryFailureHandling { get; init; }
 
 	/// <summary>
 	/// Gets an optional gate used when categories execute in series.

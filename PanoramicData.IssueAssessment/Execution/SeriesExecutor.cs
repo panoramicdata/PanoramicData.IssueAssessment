@@ -49,6 +49,18 @@ internal static class SeriesExecutor
 							InnerException: null));
 						break;
 					}
+					catch (Exception exception) when (exception is not OperationCanceledException)
+					{
+						// A gate that throws is recorded like an assessment that throws; the series stops, as nothing says
+						// whether it should have continued.
+						failures.Add(new AssessmentFailure(
+							CategoryName: previousCategory.Name,
+							AssessmentName: nameof(AssessmentCategory.SeriesGateCondition),
+							Reason: AssessmentFailureReason.ThrowingException,
+							Message: $"Series gate condition of category '{previousCategory.Name}' threw an exception.",
+							InnerException: exception));
+						break;
+					}
 
 					if (!shouldContinue)
 					{
