@@ -57,6 +57,15 @@ internal static class IntegrationTestHelpers
 	public static JsonDocument ParseIssue(string json = "{\"title\":\"Issue title\"}")
 		=> JsonDocument.Parse(json);
 
+	/// <summary>
+	/// Assesses <paramref name="json"/> (by default a ticket with only a title) with a new assessor for <paramref name="options"/>.
+	/// </summary>
+	public static async Task<IAssessmentResult> AssessAsync(AssessmentOptions options, string json = "{\"title\":\"Issue title\"}")
+	{
+		using JsonDocument issue = ParseIssue(json);
+		return await new IssueAssessor(options).AssessAsync(issue, TestContext.Current.CancellationToken);
+	}
+
 	public static IssueAssessmentResult CreateEmptyResult()
 		=> new()
 		{

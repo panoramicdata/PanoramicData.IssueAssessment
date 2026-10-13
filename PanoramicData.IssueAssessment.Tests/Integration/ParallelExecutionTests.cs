@@ -9,11 +9,6 @@ public class ParallelExecutionTests : TestBase
 {
 	private static StubDefinition Failing() => new() { RawScore = 0d, FailureReason = AssessmentFailureReason.JsonPathNotFound };
 
-	private static async Task<IAssessmentResult> AssessAsync(AssessmentOptions options)
-	{
-		using JsonDocument issue = ParseIssue();
-		return await new IssueAssessor(options).AssessAsync(issue, CancellationToken);
-	}
 
 	[Fact]
 	public async Task ParallelCategories_AllRunAndKeepConfiguredOrder()

@@ -30,7 +30,7 @@ public sealed record PatternCountAssessment : ValueAssessment, IRegexPatternAsse
 		}
 
 		int matchCount = RegexCache.GetOrAdd(Pattern).Count(text);
-		bool isInRange = (!MinMatches.HasValue || matchCount >= MinMatches.Value) && (!MaxMatches.HasValue || matchCount <= MaxMatches.Value);
+		bool isInRange = IsWithin(matchCount, MinMatches, MaxMatches);
 		string minimum = MinMatches?.ToString(CultureInfo.InvariantCulture) ?? "0";
 		string maximum = MaxMatches?.ToString(CultureInfo.InvariantCulture) ?? "+inf";
 

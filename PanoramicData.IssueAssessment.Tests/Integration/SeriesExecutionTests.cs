@@ -9,11 +9,6 @@ public class SeriesExecutionTests : TestBase
 {
 	private static readonly StubDefinition Failing = new() { RawScore = 0d, FailureReason = AssessmentFailureReason.JsonPathNotFound };
 
-	private static async Task<IAssessmentResult> AssessAsync(AssessmentOptions options, string json = "{}")
-	{
-		using JsonDocument issue = ParseIssue(json);
-		return await new IssueAssessor(options).AssessAsync(issue, CancellationToken);
-	}
 
 	[Fact]
 	public async Task Gate_ReturningTrue_RunsNextCategoryAndSeesPriorResult()

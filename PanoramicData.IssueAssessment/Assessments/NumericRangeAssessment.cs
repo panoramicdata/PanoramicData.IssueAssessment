@@ -31,7 +31,7 @@ public sealed record NumericRangeAssessment : ValueAssessment
 			return NotFound();
 		}
 
-		bool isInRange = (!MinValue.HasValue || actualValue >= MinValue.Value) && (!MaxValue.HasValue || actualValue <= MaxValue.Value);
+		bool isInRange = IsWithin(actualValue, MinValue, MaxValue);
 		return Scored(isInRange, RangeExplanation(
 			$"Value {actualValue.ToString(CultureInfo.InvariantCulture)}",
 			isInRange,

@@ -21,9 +21,7 @@ public class TimeoutTests : TestBase
 				"Category",
 				CreateAssessment("Slow", slow, timeout: ShortTimeout),
 				CreateAssessment("Fast", fast)));
-		using JsonDocument issue = ParseIssue();
-
-		IAssessmentResult result = await new IssueAssessor(options).AssessAsync(issue, CancellationToken);
+		IAssessmentResult result = await AssessAsync(options);
 
 		slow.CancellationObserved.Should().BeTrue();
 		result.Failures.Should().ContainSingle();
@@ -46,9 +44,7 @@ public class TimeoutTests : TestBase
 		AssessmentOptions options = CreateOptions(
 			CategoryExecutionStrategy.Series,
 			CreateSeriesCategory("Category", CreateAssessment("Quick", new StubDefinition { RawScore = 0.25d }, timeout: SafetyNet)));
-		using JsonDocument issue = ParseIssue();
-
-		IAssessmentResult result = await new IssueAssessor(options).AssessAsync(issue, CancellationToken);
+		IAssessmentResult result = await AssessAsync(options);
 
 		result.Failures.Should().BeEmpty();
 		result.Categories[0].Assessments[0].Score.RawScore.Should().Be(0.25d);
@@ -68,9 +64,7 @@ public class TimeoutTests : TestBase
 			CategoryTimeout = ShortTimeout,
 		};
 		AssessmentOptions options = CreateOptions(CategoryExecutionStrategy.Series, category);
-		using JsonDocument issue = ParseIssue();
-
-		IAssessmentResult result = await new IssueAssessor(options).AssessAsync(issue, CancellationToken);
+		IAssessmentResult result = await AssessAsync(options);
 
 		result.Categories.Should().ContainSingle();
 		result.Categories[0].Assessments.Should().HaveCount(2);
@@ -89,9 +83,7 @@ public class TimeoutTests : TestBase
 			CategoryTimeout = SafetyNet,
 		};
 		AssessmentOptions options = CreateOptions(CategoryExecutionStrategy.Series, category);
-		using JsonDocument issue = ParseIssue();
-
-		IAssessmentResult result = await new IssueAssessor(options).AssessAsync(issue, CancellationToken);
+		IAssessmentResult result = await AssessAsync(options);
 
 		result.Failures.Should().BeEmpty();
 		result.Categories[0].Score.NormalizedScore.Should().Be(1d);
@@ -109,9 +101,7 @@ public class TimeoutTests : TestBase
 			CategoryExecutionStrategy.Series,
 			timed,
 			CreateSeriesCategory("Later", CreateAssessment("Later", later)));
-		using JsonDocument issue = ParseIssue();
-
-		IAssessmentResult result = await new IssueAssessor(options).AssessAsync(issue, CancellationToken);
+		IAssessmentResult result = await AssessAsync(options);
 
 		result.Categories.Select(category => category.CategoryName).Should().Equal("Timed", "Later");
 		result.Failures.Should().ContainSingle().Which.CategoryName.Should().Be("Timed");
@@ -130,9 +120,7 @@ public class TimeoutTests : TestBase
 		{
 			GlobalTimeout = ShortTimeout,
 		};
-		using JsonDocument issue = ParseIssue();
-
-		IAssessmentResult result = await new IssueAssessor(options).AssessAsync(issue, CancellationToken);
+		IAssessmentResult result = await AssessAsync(options);
 
 		result.Categories.Should().HaveCount(2);
 		result.Failures.Should().ContainSingle();
@@ -156,9 +144,7 @@ public class TimeoutTests : TestBase
 		{
 			GlobalTimeout = ShortTimeout,
 		};
-		using JsonDocument issue = ParseIssue();
-
-		IAssessmentResult result = await new IssueAssessor(options).AssessAsync(issue, CancellationToken);
+		IAssessmentResult result = await AssessAsync(options);
 
 		result.Categories.Should().ContainSingle().Which.CategoryName.Should().Be("First");
 		AssessmentFailure failure = result.Failures.Should().ContainSingle().Subject;
@@ -183,9 +169,7 @@ public class TimeoutTests : TestBase
 		{
 			GlobalTimeout = ShortTimeout,
 		};
-		using JsonDocument issue = ParseIssue();
-
-		IAssessmentResult result = await new IssueAssessor(options).AssessAsync(issue, CancellationToken);
+		IAssessmentResult result = await AssessAsync(options);
 
 		result.Categories.Should().ContainSingle();
 		result.Failures.Select(failure => failure.AssessmentName).Should().Equal("Slow", nameof(AssessmentCategory.SeriesGateCondition));

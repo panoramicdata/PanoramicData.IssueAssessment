@@ -13,31 +13,10 @@ public class DescriptionQualityTests : TestBase
 	{
 		AssessmentCategory category = DescriptionQualityCategory.Create();
 
-		category.Name.Should().Be("Description Quality");
-		category.Description.Should().NotBeNullOrWhiteSpace();
-		category.AssessmentExecutionStrategy.Should().Be(AssessmentExecutionStrategy.Series);
-		category.Assessments.Select(assessment => assessment.Name)
-			.Should().Equal("Description Presence", "Description Length", "Description Word Count");
-		category.Assessments.Should().OnlyContain(assessment => assessment.Weight == 1d && !string.IsNullOrWhiteSpace(assessment.Description));
-
-		PresenceAssessment presence = category.Assessments[0].Definition.Should().BeOfType<PresenceAssessment>().Subject;
-		presence.JsonPath.Should().Be("$.description");
-		presence.PresentScore.Should().Be(1d);
-		presence.AbsentScore.Should().Be(0d);
-
-		StringLengthAssessment length = category.Assessments[1].Definition.Should().BeOfType<StringLengthAssessment>().Subject;
-		length.JsonPath.Should().Be("$.description");
-		length.MinimumLength.Should().Be(20);
-		length.MaximumLength.Should().Be(10_000);
-		length.SuccessScore.Should().Be(1d);
-		length.FailureScore.Should().Be(0d);
-
-		WordCountAssessment words = category.Assessments[2].Definition.Should().BeOfType<WordCountAssessment>().Subject;
-		words.JsonPath.Should().Be("$.description");
-		words.MinimumWordCount.Should().Be(8);
-		words.MaximumWordCount.Should().Be(1_500);
-		words.SuccessScore.Should().Be(1d);
-		words.FailureScore.Should().Be(0d);
+		category.ShouldBeSeriesCategory("Description Quality", "Description Presence", "Description Length", "Description Word Count");
+		category.Assessments[0].ShouldBePresence("$.description");
+		category.Assessments[1].ShouldBeStringLength("$.description", 20, 10_000);
+		category.Assessments[2].ShouldBeWordCount("$.description", 8, 1_500);
 	}
 
 	[Fact]
@@ -45,7 +24,7 @@ public class DescriptionQualityTests : TestBase
 	{
 		using JsonDocument issue = SampleIssuesFixture.GoodNormalized();
 
-		CategoryResult result = await AssessCategoryAsync(issue);
+		CategoryResult result = await AssessAsync(issue);
 
 		result.Score.NormalizedScore.Should().Be(1d);
 		result.Reason.Should().Be("Executed 3 assessment(s) in category 'Description Quality'.");
@@ -57,7 +36,7 @@ public class DescriptionQualityTests : TestBase
 	{
 		using JsonDocument issue = SampleIssuesFixture.MediocreNormalized();
 
-		CategoryResult result = await AssessCategoryAsync(issue);
+		CategoryResult result = await AssessAsync(issue);
 
 		result.Score.NormalizedScore.Should().BeApproximately(2d / 3d, 1e-9);
 		result.Assessments[1].Score.NormalizedScore.Should().Be(1d);
@@ -68,9 +47,8 @@ public class DescriptionQualityTests : TestBase
 	public async Task Assess_PoorTicketWithEmptyDescription_ScoresZeroWithoutFailures()
 	{
 		using JsonDocument issue = SampleIssuesFixture.PoorNormalized();
-		IssueAssessor assessor = new(OptionsBuilderFixture.Options(DescriptionQualityCategory.Create()));
 
-		IAssessmentResult result = await assessor.AssessAsync(issue, CancellationToken);
+		IAssessmentResult result = await OptionsBuilderFixture.AssessAsync(DescriptionQualityCategory.Create(), issue, CancellationToken);
 
 		result.Categories[0].Score.NormalizedScore.Should().Be(0d);
 		result.Categories[0].Assessments[0].ExplanationText.Should().Be("Value is missing for '$.description'.");
@@ -82,9 +60,8 @@ public class DescriptionQualityTests : TestBase
 	public async Task Assess_MissingDescription_ScoresZeroAndRecordsTwoFailures()
 	{
 		using JsonDocument issue = SampleIssuesFixture.Empty();
-		IssueAssessor assessor = new(OptionsBuilderFixture.Options(DescriptionQualityCategory.Create()));
 
-		IAssessmentResult result = await assessor.AssessAsync(issue, CancellationToken);
+		IAssessmentResult result = await OptionsBuilderFixture.AssessAsync(DescriptionQualityCategory.Create(), issue, CancellationToken);
 
 		result.Categories[0].Score.NormalizedScore.Should().Be(0d);
 		result.Failures.Select(failure => failure.AssessmentName).Should().Equal("Description Length", "Description Word Count");
@@ -94,40 +71,31 @@ public class DescriptionQualityTests : TestBase
 	[Fact]
 	public async Task Assess_VeryLongDescriptionWithPastedLogs_ScoresOneThird()
 	{
-		string description = string.Concat(Enumerable.Repeat("ERROR timeout ", 1_000));
-		using JsonDocument issue = SampleIssuesFixture.With(("description", description));
+		using JsonDocument issue = SampleIssuesFixture.With(("description", string.Concat(Enumerable.Repeat("ERROR timeout ", 1_000))));
 
-		CategoryResult result = await AssessCategoryAsync(issue);
+		CategoryResult result = await AssessAsync(issue);
 
 		result.Score.NormalizedScore.Should().BeApproximately(1d / 3d, 1e-9);
 	}
 
-	[Fact]
-	public async Task Assess_RawServiceNowIncident_ScoresOneBecauseServiceNowUsesDescription()
+	[Theory]
+	[InlineData("ServiceNow", 1d)]
+	[InlineData("Jira", 0d)]
+	[InlineData("GitHub", 0d)]
+	public async Task Assess_RawPlatformShapes_ScoreOnlyWhereTheFieldIsCalledDescription(string platform, double expected)
 	{
-		using JsonDocument issue = SampleIssuesFixture.RawServiceNow();
+		using JsonDocument issue = platform switch
+		{
+			"ServiceNow" => SampleIssuesFixture.RawServiceNow(),
+			"Jira" => SampleIssuesFixture.RawJira(),
+			_ => SampleIssuesFixture.RawGitHub(),
+		};
 
-		CategoryResult result = await AssessCategoryAsync(issue);
+		CategoryResult result = await AssessAsync(issue);
 
-		result.Score.NormalizedScore.Should().Be(1d);
+		result.Score.NormalizedScore.Should().Be(expected, "Jira uses fields.description and GitHub uses body");
 	}
 
-	[Fact]
-	public async Task Assess_RawJiraAndGitHubIssues_ScoreZeroWithoutNormalization()
-	{
-		using JsonDocument jira = SampleIssuesFixture.RawJira();
-		using JsonDocument gitHub = SampleIssuesFixture.RawGitHub();
-
-		CategoryResult jiraResult = await AssessCategoryAsync(jira);
-		CategoryResult gitHubResult = await AssessCategoryAsync(gitHub);
-
-		jiraResult.Score.NormalizedScore.Should().Be(0d, "Jira keeps the description in fields.description");
-		gitHubResult.Score.NormalizedScore.Should().Be(0d, "GitHub keeps the description in body");
-	}
-
-	private static async Task<CategoryResult> AssessCategoryAsync(JsonDocument issue)
-	{
-		IAssessmentResult result = await OptionsBuilderFixture.AssessAsync(DescriptionQualityCategory.Create(), issue, CancellationToken);
-		return result.Categories.Should().ContainSingle().Subject;
-	}
+	private static Task<CategoryResult> AssessAsync(JsonDocument issue)
+		=> BaseCategoryTestHelpers.AssessCategoryAsync(DescriptionQualityCategory.Create(), issue);
 }

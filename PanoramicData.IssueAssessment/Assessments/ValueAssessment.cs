@@ -84,6 +84,13 @@ public abstract record ValueAssessment : IAssessmentDefinition, IJsonPathAssessm
 		=> $"{subject} at '{JsonPath}' is {(isInRange ? "within" : "outside")} range {minimum}-{maximum}.";
 
 	/// <summary>
+	/// True when <paramref name="value"/> lies in the inclusive range; a null bound is open.
+	/// </summary>
+	private protected static bool IsWithin<T>(T value, T? minimum, T? maximum)
+		where T : struct, IComparable<T>
+		=> (minimum is not { } low || value.CompareTo(low) >= 0) && (maximum is not { } high || value.CompareTo(high) <= 0);
+
+	/// <summary>
 	/// Returns the value as a string when it is a JSON string.
 	/// </summary>
 	private protected static bool TryGetString(JsonElement value, out string text)

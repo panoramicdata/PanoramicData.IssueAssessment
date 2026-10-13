@@ -52,7 +52,7 @@ public sealed record DateRangeAssessment : ValueAssessment
 				: $"Date value '{text}' at '{JsonPath}' could not be parsed as a date.");
 		}
 
-		bool isInRange = (!MinDate.HasValue || actualDate >= MinDate.Value) && (!MaxDate.HasValue || actualDate <= MaxDate.Value);
+		bool isInRange = IsWithin(actualDate, MinDate, MaxDate);
 		return Scored(isInRange, RangeExplanation(
 			$"Date {actualDate.ToString(DisplayFormat, CultureInfo.InvariantCulture)}",
 			isInRange,

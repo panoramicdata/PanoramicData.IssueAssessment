@@ -13,30 +13,10 @@ public class TitleQualityTests : TestBase
 	{
 		AssessmentCategory category = TitleQualityCategory.Create();
 
-		category.Name.Should().Be("Title Quality");
-		category.Description.Should().NotBeNullOrWhiteSpace();
-		category.AssessmentExecutionStrategy.Should().Be(AssessmentExecutionStrategy.Series);
-		category.Assessments.Select(assessment => assessment.Name).Should().Equal("Title Presence", "Title Length", "Title Word Count");
-		category.Assessments.Should().OnlyContain(assessment => assessment.Weight == 1d && !string.IsNullOrWhiteSpace(assessment.Description));
-
-		PresenceAssessment presence = category.Assessments[0].Definition.Should().BeOfType<PresenceAssessment>().Subject;
-		presence.JsonPath.Should().Be("$.title");
-		presence.PresentScore.Should().Be(1d);
-		presence.AbsentScore.Should().Be(0d);
-
-		StringLengthAssessment length = category.Assessments[1].Definition.Should().BeOfType<StringLengthAssessment>().Subject;
-		length.JsonPath.Should().Be("$.title");
-		length.MinimumLength.Should().Be(5);
-		length.MaximumLength.Should().Be(150);
-		length.SuccessScore.Should().Be(1d);
-		length.FailureScore.Should().Be(0d);
-
-		WordCountAssessment words = category.Assessments[2].Definition.Should().BeOfType<WordCountAssessment>().Subject;
-		words.JsonPath.Should().Be("$.title");
-		words.MinimumWordCount.Should().Be(3);
-		words.MaximumWordCount.Should().Be(30);
-		words.SuccessScore.Should().Be(1d);
-		words.FailureScore.Should().Be(0d);
+		category.ShouldBeSeriesCategory("Title Quality", "Title Presence", "Title Length", "Title Word Count");
+		category.Assessments[0].ShouldBePresence("$.title");
+		category.Assessments[1].ShouldBeStringLength("$.title", 5, 150);
+		category.Assessments[2].ShouldBeWordCount("$.title", 3, 30);
 	}
 
 	[Fact]
@@ -180,9 +160,6 @@ public class TitleQualityTests : TestBase
 		serviceNowResult.Score.NormalizedScore.Should().Be(0d, "ServiceNow keeps the title in short_description");
 	}
 
-	private static async Task<CategoryResult> AssessCategoryAsync(JsonDocument issue)
-	{
-		IAssessmentResult result = await OptionsBuilderFixture.AssessAsync(TitleQualityCategory.Create(), issue, CancellationToken);
-		return result.Categories.Should().ContainSingle().Subject;
-	}
+	private static Task<CategoryResult> AssessCategoryAsync(JsonDocument issue)
+		=> BaseCategoryTestHelpers.AssessCategoryAsync(TitleQualityCategory.Create(), issue);
 }
