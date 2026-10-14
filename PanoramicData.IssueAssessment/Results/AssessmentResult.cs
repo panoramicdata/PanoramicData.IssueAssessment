@@ -13,7 +13,18 @@ public sealed record AssessmentResult(
 	AssessmentScore Score,
 	string ExplanationText,
 	AssessmentFailureReason? FailureReason,
-	Exception? InnerException);
+	Exception? InnerException)
+{
+	/// <summary>
+	/// Gets how the assessment came out: passed, partly met, failed, not applicable, or an error.
+	/// </summary>
+	public AssessmentOutcome Outcome { get; init; } = AssessmentOutcomes.FromScore(Score, FailureReason);
+
+	/// <summary>
+	/// Gets what to do to improve the result, when the assessment did not pass and one is configured.
+	/// </summary>
+	public string? Recommendation { get; init; }
+}
 
 /// <summary>
 /// Represents the aggregated result for one category.
@@ -26,7 +37,19 @@ public sealed record CategoryResult(
 	string CategoryName,
 	AssessmentScore Score,
 	string Reason,
-	ImmutableList<AssessmentResult> Assessments);
+	ImmutableList<AssessmentResult> Assessments)
+{
+	/// <summary>
+	/// Gets how the category came out, from its normalized score; not applicable when the category did not apply or
+	/// none of its assessments did.
+	/// </summary>
+	public AssessmentOutcome Outcome { get; init; } = AssessmentOutcomes.FromScore(Score, null);
+
+	/// <summary>
+	/// Gets the category's weight in the overall score.
+	/// </summary>
+	public double Weight { get; init; } = 1d;
+}
 
 /// <summary>
 /// Represents score information including normalization bounds.
@@ -54,7 +77,13 @@ public sealed record AssessmentExecutionResult(
 	string? ExplanationText,
 	AssessmentFailureReason? FailureReason,
 	Exception? InnerException,
-	JsonDocument? VirtualExtensionOutput);
+	JsonDocument? VirtualExtensionOutput)
+{
+	/// <summary>
+	/// Gets what the definition recommends, overriding <see cref="Assessment.Recommendation"/>.
+	/// </summary>
+	public string? Recommendation { get; init; }
+}
 
 /// <summary>
 /// Represents a failure captured during execution.
@@ -146,4 +175,7 @@ public sealed record IssueAssessmentResult : IAssessmentResult
 	/// Gets optional captured virtual document.
 	/// </summary>
 	public JsonDocument? VirtualDocument { get; init; }
+
+	/// <inheritdoc />
+	public AssessmentOverall? Overall { get; init; }
 }

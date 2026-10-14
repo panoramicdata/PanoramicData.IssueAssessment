@@ -316,12 +316,64 @@ used and was removed: it pulled in a vulnerable NCalc version.
 
 ---
 
-## Out of scope for 1.0
+## Rubrics (1.1)
+
+1.1 exists so that two consumers can share one definition of ticket quality: Yoda's PowerShell skills
+(`IssueQualityCore.ps1`) and the QA Dashboard, which carried a hand-ported C# copy whose weights had drifted.
+Rather than port that engine's code, 1.1 adds the primitives it needed and expresses its rules as data.
+
+### Why data, not code
+
+A rubric is a JSON file that `AssessmentRubric.Load` turns into ordinary `AssessmentOptions`. Every rule type is a
+record that implements `ICondition` or `IMeasure` and is serialized polymorphically through a `type` discriminator.
+This means a non-C# consumer can read and edit the rubric, and a change to it is a reviewable diff. It also means
+the rubric is validated as strictly as hand-written options are.
+
+### Tiered assessments
+
+Most of the ported rules have the shape "if this, score 100 with this finding; else if that, score 50; else 0".
+`TieredAssessment` is exactly that: named measures, then tiers tried in order, the last unconditional. Measures are
+evaluated lazily and once per assessment; named conditions are memoised once per issue in the `EvaluationContext`,
+which also caches joined text sources, so twenty assessments that all read the description's "steps" section parse
+it once.
+
+### Applicability
+
+The original engine scored rules that did not apply (a rollback plan on a bug) as neither pass nor fail. 1.1 makes
+that explicit: an assessment or category with an `AppliesWhen` that does not hold has the `NotApplicable` outcome,
+and its weight is removed from both the achieved and possible score, so the score is renormalised over what applies.
+A category whose assessments all fail to apply is itself not applicable and leaves the overall average.
+
+### Overall verdict
+
+`AssessmentOverall` is computed after all categories: the weighted average of applicable category scores, then
+score caps (the lowest applicable cap wins; caps carry a group so a consumer can report "mandatory" ones), then grade
+bands, classifications and the values of every named condition as flags. Caps and classifications can use
+`assessmentScore`, which reads finished results, so validation rejects it anywhere else.
+
+### Parity
+
+The built-in rubric was checked against the PowerShell engine rather than reasoned about: 74 of its test fixtures
+are committed as golden tests, and 320 real Jira tickets (not committed) matched on score, grade, findings in
+order, recommendations, flags and classifications, through both that engine's ticket conversion and
+`JiraIssueMapper`. Two features exist only because parity needed them: `IssueText.SectionBody` reproduces the
+original's section rules for both wiki and Markdown dialects, and placeholders such as `{$.path~pattern}` reproduce
+its finding text.
+
+### Compatibility
+
+Everything is additive. New members on `IAssessmentOptions` and `IAssessmentResult` are default interface members
+returning empty values, existing definitions do not see the `EvaluationContext`, and options without rubric rules
+behave exactly as in 1.0 (with an `Overall` that has no grade).
+
+---
+
+## Out of scope
 
 - LLM-backed assessments (a `CustomCallbackAssessment` can call one today).
 - Cross-ticket assessments, such as duplicate or anomaly detection.
-- Serialization of results; results are records that `System.Text.Json` can serialize if needed.
 - A full JSONPath implementation.
+- A typed Jira client mapper; `NormalizedIssue` can be filled directly from any client's objects.
 
 ---
 

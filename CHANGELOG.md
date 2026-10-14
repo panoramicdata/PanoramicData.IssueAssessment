@@ -5,6 +5,34 @@ All notable changes to this project are documented here. The format follows
 [Semantic Versioning](https://semver.org/). Versions are `major.minor.height`, where the height comes from
 Nerdbank.GitVersioning.
 
+## [1.1] - Unreleased
+
+Adds rubrics: whole configurations written as JSON, with a built-in Panoramic Data ticket-quality rubric. Everything
+is additive; 1.0 code compiles and behaves as before.
+
+### Added
+
+- `AssessmentRubric`: load options from rubric JSON (string or stream) and write them back; code-defined
+  definitions plug in by name through `NamedAssessmentDefinition`.
+- `TieredAssessment`: ordered tiers of condition, score, finding and recommendation over named measures.
+- Conditions (`all`, `any`, `not`, `ref`, `measure`, `textMatches`, `fieldMatches`, `fieldEquals`, `fieldPresent`,
+  `sectionPresent`, `placeholder`, `assessmentScore`) and measures (`patternMatchCount`, `occurrenceCount`,
+  `wordCount`, `alphanumericCount`, `length`, `itemCount`, `number`, `criteriaHeadingCount`) over `TextSource`s
+  that can narrow to a headed section.
+- `AppliesWhen` and `NotApplicableExplanation` on assessments, `AppliesWhen` and `Weight` on categories; work that
+  does not apply has the `NotApplicable` outcome and is left out of the score.
+- Named conditions, score caps, grade bands and classifications on the options, and `IAssessmentResult.Overall`
+  (`AssessmentOverall`: score, uncapped score, grade, applied caps, flags and classifications).
+- `Recommendation` on assessments and results; `Outcome` on assessment and category results.
+- `AssessmentReport`: a flat, serializable summary of a result, with `ToJson()`.
+- `BuiltInRubrics.PanoramicDataTicketQuality`, matching Yoda's `IssueQualityCore.ps1` on its test fixtures and on
+  320 real Jira tickets.
+- `NormalizedIssue` with `JiraIssueMapper` (REST v2 and v3 / ADF), `GitHubIssueMapper` and
+  `ServiceNowRecordMapper`.
+- `IssueText`: section bodies in Jira wiki and Markdown, criteria headings, placeholder detection, word and
+  alphanumeric counts.
+- Validation of every rubric rule at construction, including undefined and cyclic condition references.
+
 ## [1.0.19] - 2026-10-13
 
 First release.

@@ -9,7 +9,7 @@ internal static class AssessmentValidator
 	private const double MinimumWeight = -100d;
 	private const double MaximumWeight = 100d;
 
-	internal static void Validate(AssessmentCategory category, Assessment assessment)
+	internal static void Validate(AssessmentCategory category, Assessment assessment, RuleScope scope)
 	{
 		ArgumentNullException.ThrowIfNull(assessment);
 
@@ -18,15 +18,7 @@ internal static class AssessmentValidator
 			throw new ArgumentException($"Category '{category.Name}' contains an assessment with no name.", nameof(assessment));
 		}
 
-		Exception? innerException = null;
-		string? error = AssessmentError(assessment);
-		if (error is null)
-		{
-			error = SelectorError(assessment.Definition, out innerException)
-				?? DefinitionError(assessment.Definition)
-				?? SettingsError(assessment);
-		}
-
+		string? error = Error(assessment, scope, out Exception? innerException);
 		if (error is not null)
 		{
 			throw new ArgumentException(
@@ -35,6 +27,35 @@ internal static class AssessmentValidator
 				innerException);
 		}
 	}
+
+	/// <summary>
+	/// The first problem with the assessment, checked in order: identity, selectors, definition settings, assessment
+	/// settings, then rules.
+	/// </summary>
+	private static string? Error(Assessment assessment, RuleScope scope, out Exception? innerException)
+	{
+		innerException = null;
+		return AssessmentError(assessment)
+			?? SelectorError(assessment.Definition, out innerException)
+			?? DefinitionError(assessment.Definition)
+			?? SettingsError(assessment)
+			?? RuleError(assessment, scope);
+	}
+
+	/// <summary>
+	/// Validates the assessment's applicability condition and, for a tiered or named definition, its rules.
+	/// </summary>
+	private static string? RuleError(Assessment assessment, RuleScope scope)
+		=> RuleValidator.ConditionError(assessment.AppliesWhen, scope)
+			?? PlaceholderText.Keys(assessment.NotApplicableExplanation)
+				.Select(key => key.StartsWith('$') ? RuleValidator.PathError(key) : $"has a not-applicable explanation placeholder '{{{key}}}' that is not a JSONPath.")
+				.FirstOrDefault(error => error is not null)
+			?? assessment.Definition switch
+			{
+				TieredAssessment tiered => TieredValidator.Error(tiered, scope),
+				NamedAssessmentDefinition named => $"refers to custom definition '{named.Name}', which was not registered when the rubric was loaded.",
+				_ => null,
+			};
 
 	private static string? AssessmentError(Assessment assessment)
 	{

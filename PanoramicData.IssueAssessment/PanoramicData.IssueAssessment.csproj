@@ -12,17 +12,21 @@
 		<RepositoryType>git</RepositoryType>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageIcon>Icon.png</PackageIcon>
-		<Description>Schema-agnostic issue and ticket quality assessment for .NET: score Jira, GitHub, ServiceNow or any JSON ticket with composable, weighted assessments, built-in quality categories, series or parallel execution, aggregation and optional caching.</Description>
+		<Description>Schema-agnostic issue and ticket quality assessment for .NET: score Jira, GitHub, ServiceNow or any JSON ticket with composable, weighted assessments, built-in quality categories, JSON rubrics with grades, caps and recommendations, Jira/GitHub/ServiceNow mappers, series or parallel execution, aggregation and optional caching.</Description>
 		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<PackageTags>Issue;Ticket;Quality;Assessment;Scoring;Jira;GitHub;ServiceNow;JSON;PanoramicData</PackageTags>
+		<PackageTags>Issue;Ticket;Quality;Assessment;Scoring;Rubric;Jira;GitHub;ServiceNow;JSON;PanoramicData</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Nerdbank.GitVersioning" PrivateAssets="all" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="Rubrics\*.json" LogicalName="PanoramicData.IssueAssessment.Rubrics.%(Filename)%(Extension)" />
 	</ItemGroup>
 
 	<ItemGroup>

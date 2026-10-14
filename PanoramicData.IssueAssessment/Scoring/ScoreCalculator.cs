@@ -22,6 +22,7 @@ public static class ScoreCalculator
 			PresenceAssessment presence => ToRange(presence.PresentScore, presence.AbsentScore),
 			ValueAssessment value => ToRange(value.SuccessScore, value.FailureScore),
 			JsonPathSelectorAssessment selector => ToRange(selector.SuccessScore, selector.FailureScore),
+			TieredAssessment tiered => (tiered.MinimumScore, tiered.MaximumScore),
 			// Callbacks and custom definitions declare no bounds, so their raw scores are taken to lie in [0, 1].
 			_ => (DefaultUnknownMinimum, DefaultUnknownMaximum),
 		};
@@ -35,11 +36,23 @@ public static class ScoreCalculator
 	public static (double MinPossibleRaw, double MaxPossibleRaw) CalculateCategoryRawRange(AssessmentCategory category)
 	{
 		ArgumentNullException.ThrowIfNull(category);
+		return CalculateCategoryRawRange(category.Assessments);
+	}
+
+	/// <summary>
+	/// Calculates the weighted minimum and maximum raw score bounds over <paramref name="assessments"/>, for example
+	/// only those of a category that applied.
+	/// </summary>
+	/// <param name="assessments">The assessments.</param>
+	/// <returns>The weighted raw score bounds.</returns>
+	public static (double MinPossibleRaw, double MaxPossibleRaw) CalculateCategoryRawRange(IEnumerable<Assessment> assessments)
+	{
+		ArgumentNullException.ThrowIfNull(assessments);
 
 		double min = 0d;
 		double max = 0d;
 
-		foreach (Assessment assessment in category.Assessments)
+		foreach (Assessment assessment in assessments)
 		{
 			(double assessmentMin, double assessmentMax) = CalculateAssessmentRawRange(assessment);
 			double weight = assessment.Weight;

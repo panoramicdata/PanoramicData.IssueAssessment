@@ -96,9 +96,10 @@ public class IssueAssessor
 			? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)
 			: CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, globalTimeoutCts.Token);
 
+		EvaluationContext context = new(issue, _options.Conditions);
 		ExecutionResult executionResult = _options.ExecutionStrategy == CategoryExecutionStrategy.Parallel
-			? await ParallelExecutor.ExecuteAsync(_options, issue, linkedCts.Token).ConfigureAwait(false)
-			: await SeriesExecutor.ExecuteAsync(_options, issue, linkedCts.Token).ConfigureAwait(false);
+			? await ParallelExecutor.ExecuteAsync(_options, context, linkedCts.Token).ConfigureAwait(false)
+			: await SeriesExecutor.ExecuteAsync(_options, context, linkedCts.Token).ConfigureAwait(false);
 
 		// Executors record a cancelled assessment as a timeout failure so that the global timeout yields a partial
 		// result. Cancellation requested by the caller is not a timeout: surface it rather than return that result.
@@ -110,6 +111,7 @@ public class IssueAssessor
 			Failures = executionResult.Failures,
 			Aggregations = AggregationCalculator.Calculate(executionResult.Categories),
 			VirtualDocument = _options.CaptureVirtualDocument ? executionResult.VirtualDocument : null,
+			Overall = OverallCalculator.Calculate(_options, context, executionResult.Categories),
 		};
 	}
 }

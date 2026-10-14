@@ -5,5 +5,6 @@ global using PanoramicData.IssueAssessment.Assessments;
 global using PanoramicData.IssueAssessment.Configuration;
 global using PanoramicData.IssueAssessment.Core;
 global using PanoramicData.IssueAssessment.Results;
+global using PanoramicData.IssueAssessment.Rules;
 global using PanoramicData.IssueAssessment.Utilities;
 global using PanoramicData.IssueAssessment.Validation;

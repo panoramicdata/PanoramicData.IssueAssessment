@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using PanoramicData.IssueAssessment.Gates;
+
 namespace PanoramicData.IssueAssessment.Core;
 /// <summary>
 /// Defines immutable options used to configure issue assessments.
@@ -28,11 +31,45 @@ public interface IAssessmentOptions
 	/// Gets a value indicating whether the final virtual document should be captured in results.
 	/// </summary>
 	bool CaptureVirtualDocument { get; }
+
+	/// <summary>
+	/// Gets named conditions that rules refer to with a <see cref="ConditionReference"/>, and that are reported as the
+	/// result's flags.
+	/// </summary>
+	ImmutableDictionary<string, ICondition> Conditions => ImmutableDictionary<string, ICondition>.Empty;
+
+	/// <summary>
+	/// Gets caps on the overall score, applied when their condition holds: for example, a missing mandatory element
+	/// holds the score below the top grade.
+	/// </summary>
+	ImmutableList<ScoreCap> ScoreCaps => [];
+
+	/// <summary>
+	/// Gets the grade bands the overall score is graded by.
+	/// </summary>
+	ImmutableList<GradeBand> GradeBands => [];
+
+	/// <summary>
+	/// Gets classifications: for each name, rules evaluated in order whose first match gives the value.
+	/// </summary>
+	ImmutableDictionary<string, ImmutableList<ClassificationRule>> Classifications
+		=> ImmutableDictionary<string, ImmutableList<ClassificationRule>>.Empty;
 }
 
 /// <summary>
 /// Defines an executable assessment implementation.
 /// </summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(PresenceAssessment), "presence")]
+[JsonDerivedType(typeof(RegexAssessment), "regex")]
+[JsonDerivedType(typeof(StringLengthAssessment), "stringLength")]
+[JsonDerivedType(typeof(WordCountAssessment), "wordCount")]
+[JsonDerivedType(typeof(NumericRangeAssessment), "numericRange")]
+[JsonDerivedType(typeof(DateRangeAssessment), "dateRange")]
+[JsonDerivedType(typeof(EnumAssessment), "enum")]
+[JsonDerivedType(typeof(PatternCountAssessment), "patternCount")]
+[JsonDerivedType(typeof(TieredAssessment), "tiered")]
+[JsonDerivedType(typeof(NamedAssessmentDefinition), "named")]
 public interface IAssessmentDefinition
 {
 	/// <summary>
@@ -46,6 +83,22 @@ public interface IAssessmentDefinition
 		JsonDocument input,
 		JsonDocument? virtualExtension,
 		CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// An assessment definition that can use the <see cref="EvaluationContext"/>: the rubric's named conditions and the
+/// cached text of the issue. The assessor calls this overload instead of
+/// <see cref="IAssessmentDefinition.ExecuteAsync(JsonDocument, JsonDocument?, CancellationToken)"/>.
+/// </summary>
+public interface IContextualAssessmentDefinition
+{
+	/// <summary>
+	/// Executes the assessment against the issue and virtual extension in <paramref name="context"/>.
+	/// </summary>
+	/// <param name="context">The evaluation context.</param>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>The execution result.</returns>
+	Task<AssessmentExecutionResult> ExecuteAsync(EvaluationContext context, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -73,6 +126,9 @@ public interface IRegexPatternAssessmentDefinition
 /// <summary>
 /// Defines a gate condition that controls whether the next series category should execute.
 /// </summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(ScoreThresholdGate), "scoreThreshold")]
+[JsonDerivedType(typeof(NoFailuresGate), "noFailures")]
 public interface ISeriesGateCondition
 {
 	/// <summary>
@@ -140,6 +196,12 @@ public interface IAssessmentResult
 	/// Gets the final virtual document, if captured.
 	/// </summary>
 	JsonDocument? VirtualDocument { get; }
+
+	/// <summary>
+	/// Gets the overall verdict: the weighted score across categories after any score caps, its grade, and the
+	/// rubric's flags and classifications. Null for results produced before 1.1 or by custom implementations.
+	/// </summary>
+	AssessmentOverall? Overall => null;
 }
 
 /// <summary>

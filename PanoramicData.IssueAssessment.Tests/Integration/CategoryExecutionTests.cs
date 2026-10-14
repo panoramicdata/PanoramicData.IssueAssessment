@@ -23,7 +23,7 @@ public class CategoryExecutionTests : TestBase
 	{
 		AssessmentCategory category = CreateSeriesCategory("Category", CreateAssessment("Assessment", new StubDefinition()));
 
-		Func<Task> act = () => CategoryExecutor.ExecuteAsync(category, null!, null, FailureHandlingStrategy.CollectAll, CancellationToken);
+		Func<Task> act = () => CategoryExecutor.ExecuteAsync(category, (JsonDocument)null!, null, FailureHandlingStrategy.CollectAll, CancellationToken);
 
 		(await act.Should().ThrowAsync<ArgumentNullException>()).WithParameterName("input");
 	}

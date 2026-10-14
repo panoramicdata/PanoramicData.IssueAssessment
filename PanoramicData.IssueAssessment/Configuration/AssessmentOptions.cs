@@ -28,6 +28,19 @@ public sealed record AssessmentOptions : IAssessmentOptions
 	/// Gets a value indicating whether the final virtual document should be included in results.
 	/// </summary>
 	public bool CaptureVirtualDocument { get; init; }
+
+	/// <inheritdoc />
+	public ImmutableDictionary<string, ICondition> Conditions { get; init; } = ImmutableDictionary<string, ICondition>.Empty;
+
+	/// <inheritdoc />
+	public ImmutableList<ScoreCap> ScoreCaps { get; init; } = [];
+
+	/// <inheritdoc />
+	public ImmutableList<GradeBand> GradeBands { get; init; } = [];
+
+	/// <inheritdoc />
+	public ImmutableDictionary<string, ImmutableList<ClassificationRule>> Classifications { get; init; }
+		= ImmutableDictionary<string, ImmutableList<ClassificationRule>>.Empty;
 }
 
 /// <summary>
@@ -70,6 +83,17 @@ public sealed record AssessmentCategory
 	/// Gets an optional gate used when categories execute in series.
 	/// </summary>
 	public ISeriesGateCondition? SeriesGateCondition { get; init; }
+
+	/// <summary>
+	/// Gets the category's weight in the overall score. Default 1; must not be negative.
+	/// </summary>
+	public double Weight { get; init; } = 1d;
+
+	/// <summary>
+	/// Gets an optional condition under which the category applies. When it is false the category is not run, is
+	/// reported as not applicable, and does not count in the overall score.
+	/// </summary>
+	public ICondition? AppliesWhen { get; init; }
 }
 
 /// <summary>
@@ -111,4 +135,22 @@ public sealed record Assessment
 	/// Gets the logical name for the virtual output value.
 	/// </summary>
 	public string? VirtualOutputName { get; init; }
+
+	/// <summary>
+	/// Gets an optional condition under which the assessment applies. When it is false the assessment is not run, is
+	/// reported as not applicable, and is left out of its category's score and score range, so the remaining weights
+	/// are renormalised.
+	/// </summary>
+	public ICondition? AppliesWhen { get; init; }
+
+	/// <summary>
+	/// Gets what to recommend when the assessment does not pass. A tier's own recommendation takes precedence.
+	/// </summary>
+	public string? Recommendation { get; init; }
+
+	/// <summary>
+	/// Gets the explanation reported when <see cref="AppliesWhen"/> is false, for example "○ Component: not used by this
+	/// project". When not set, a not-applicable assessment reports an empty explanation.
+	/// </summary>
+	public string? NotApplicableExplanation { get; init; }
 }

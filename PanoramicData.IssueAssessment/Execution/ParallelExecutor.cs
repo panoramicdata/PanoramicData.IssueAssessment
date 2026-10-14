@@ -10,14 +10,14 @@ internal static class ParallelExecutor
 	/// </summary>
 	public static async Task<ExecutionResult> ExecuteAsync(
 		IAssessmentOptions options,
-		JsonDocument input,
+		EvaluationContext context,
 		CancellationToken cancellationToken)
 	{
 		ArgumentNullException.ThrowIfNull(options);
-		ArgumentNullException.ThrowIfNull(input);
+		ArgumentNullException.ThrowIfNull(context);
 
 		Task<(CategoryResult Category, ImmutableList<AssessmentFailure> Failures, JsonDocument? VirtualDocument)>[] tasks = options.Categories
-			.Select(category => CategoryExecutor.ExecuteAsync(category, input, null, options.FailureHandling, cancellationToken))
+			.Select(category => CategoryExecutor.ExecuteAsync(category, context, null, options.FailureHandling, cancellationToken))
 			.ToArray();
 
 		(CategoryResult Category, ImmutableList<AssessmentFailure> Failures, JsonDocument? VirtualDocument)[] executed =

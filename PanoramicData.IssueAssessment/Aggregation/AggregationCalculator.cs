@@ -45,7 +45,7 @@ public static class AggregationCalculator
 
 		(double? weightedAverage, _, double weightSum) = ScoreCalculator.CalculateWeightedAverages(
 			categories
-				.Select(category => (Score: category.Score.NormalizedScore, Weight: 1.0d))
+				.Select(category => (Score: category.Outcome == AssessmentOutcome.NotApplicable ? null : category.Score.NormalizedScore, category.Weight))
 				.ToList());
 
 		WeightedAggregationMetrics weighted = new(weightedAverage, weightSum);

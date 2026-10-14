@@ -89,6 +89,45 @@ Needs, in order:
 6. [x] Run the NugetManagement governance assessment and fix what it reports
 7. [x] `./Publish.ps1` on a clean, synced `main`; confirm the version on nuget.org
 
-## Phase 9: Consumers (optional)
+## Phase 9: Consumers
 
-- [ ] Decide whether a PanoramicData.Skills skill or a consuming dashboard should use the package
+Decided 2026-10-13: the package replaces both existing ticket-quality engines, QaDashboard's
+`TicketQualityService.cs` (MagicSuite) and Yoda's `_common/IssueQualityCore.ps1` (PanoramicData.Skills), which already
+disagree (different weights; QaDashboard lacks business case, rollback plan and the mandatory-element cap).
+
+Decisions:
+- Version 1.1: everything below is additive, so existing code keeps compiling.
+- The canonical Panoramic Data rubric ships inside this package as JSON, versioned with it.
+- Yoda calls the library through a file-based C# skill (`#:package`), emitting the JSON its PowerShell wrappers read.
+- Rollout end to end: this package, then PRs in PanoramicData.Skills and MagicSuite.
+- Parity spec: Yoda's `Test-IssueQuality*.ps1` tests, plus all engines scored side by side on real MS tickets.
+
+### 9.1 Scoring core
+- [ ] Applicability: `AppliesWhen` conditions on assessments and categories; a not-applicable assessment is left out
+      of the category's score and bounds, and a not-applicable category out of the overall score
+- [ ] Category `Weight` in the overall score
+- [ ] `TieredAssessment`: the first matching tier's score (partial credit)
+- [ ] Mandatory assessments and an overall score cap when one is unmet
+- [ ] Overall result: score in [0, 1], 0–100, grade from configurable bands, and the caps applied
+
+### 9.2 Findings and recommendations
+- [ ] Assessment outcome: Passed, Partial, Failed, NotApplicable, Error
+- [ ] `Recommendation` on assessments and tiers, reported when not passed
+
+### 9.3 Ticket text tools
+- [ ] Text from several fields (`AlsoFrom`)
+- [ ] Heading sections (Jira wiki and Markdown, label lines), CRLF-safe, with placeholder detection
+
+### 9.4 Rubrics, results and mappers
+- [ ] JSON rubric load and save (polymorphic definitions and conditions; named custom definitions)
+- [ ] Serialisable `AssessmentReport`
+- [ ] Normalized issue v2 (type, priority, status, project, components, labels, fix versions, attachments) and
+      mappers for Jira REST (v2 wiki and v3 ADF), GitHub and ServiceNow
+- [ ] `PanoramicData.IssueAssessment.Jira`: Jira.Api `Issue` mapper
+- [ ] Built-in Panoramic Data ticket-quality rubric, ported from Yoda's engine; parity with its tests
+
+### 9.5 Adoption
+- [ ] Publish 1.1
+- [ ] PanoramicData.Skills: file-based C# skill; IssueQualityCore.ps1 delegates to it; Yoda's tests pass; PR
+- [ ] MagicSuite: QaDashboard's `TicketQualityService` uses the package and rubric; PR
+- [ ] Side-by-side parity report on real MS tickets

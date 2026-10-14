@@ -26,12 +26,14 @@ public static class OptionsValidator
 			throw new ArgumentException("GlobalTimeout must be greater than zero.", nameof(options));
 		}
 
+		RuleScope scope = RubricValidator.ValidateConditions(options);
 		foreach (AssessmentCategory category in options.Categories)
 		{
-			ValidateCategory(category);
+			ValidateCategory(category, scope);
 		}
 
 		ValidateUniqueNames(options);
+		RubricValidator.ValidateRubricRules(options, scope);
 	}
 
 	/// <summary>
@@ -59,11 +61,11 @@ public static class OptionsValidator
 	private static string? FirstDuplicate(IEnumerable<string> names)
 		=> names.GroupBy(name => name, StringComparer.Ordinal).FirstOrDefault(group => group.Count() > 1)?.Key;
 
-	private static void ValidateCategory(AssessmentCategory category)
+	private static void ValidateCategory(AssessmentCategory category, RuleScope scope)
 	{
 		ArgumentNullException.ThrowIfNull(category);
 
-		string? error = CategoryError(category);
+		string? error = CategoryError(category) ?? RubricValidator.CategoryRuleError(category, scope);
 		if (error is not null)
 		{
 			throw new ArgumentException(error, nameof(category));
@@ -80,7 +82,7 @@ public static class OptionsValidator
 
 		foreach (Assessment assessment in category.Assessments)
 		{
-			AssessmentValidator.Validate(category, assessment);
+			AssessmentValidator.Validate(category, assessment, scope);
 		}
 	}
 
