@@ -46,28 +46,34 @@ public sealed record AssessmentReport
 	public static AssessmentReport From(IAssessmentResult result)
 	{
 		ArgumentNullException.ThrowIfNull(result);
-		AssessmentOverall? overall = result.Overall;
+		AssessmentOverall overall = result.Overall ?? NoOverall;
 		List<AssessmentResult> assessments = [.. result.Categories.SelectMany(category => category.Assessments)];
 
 		return new AssessmentReport
 		{
-			Score = overall?.Score100,
-			NormalizedScore = overall?.Score,
-			Grade = overall?.Grade,
+			Score = overall.Score100,
+			NormalizedScore = overall.Score,
+			Grade = overall.Grade,
 			Findings = [.. assessments.Select(assessment => assessment.ExplanationText).Where(text => !string.IsNullOrWhiteSpace(text))],
 			Recommendations = [.. assessments.Select(assessment => assessment.Recommendation).OfType<string>().Distinct(StringComparer.Ordinal)],
-			Caps = overall?.Caps ?? [],
-			Flags = overall?.Flags ?? ImmutableDictionary<string, bool>.Empty,
-			Classifications = overall?.Classifications ?? ImmutableDictionary<string, string>.Empty,
+			Caps = overall.Caps,
+			Flags = overall.Flags,
+			Classifications = overall.Classifications,
 			Categories = [.. result.Categories.Select(CategoryReport.From)],
-			Failures = [.. result.Failures.Select(failure => new FailureReport(
-				failure.CategoryName,
-				failure.AssessmentName,
-				failure.Reason,
-				failure.Message,
-				failure.InnerException?.Message))],
+			Failures = [.. result.Failures.Select(FailureReport.From)],
 		};
 	}
+
+	/// <summary>
+	/// Stands in for the overall verdict of a result that has none: no score, grade, caps, flags or classifications.
+	/// </summary>
+	private static readonly AssessmentOverall NoOverall = new(
+		null,
+		null,
+		null,
+		[],
+		ImmutableDictionary<string, bool>.Empty,
+		ImmutableDictionary<string, string>.Empty);
 
 	/// <summary>
 	/// Writes the report as indented JSON with camelCase names and enum names as strings.
@@ -142,4 +148,8 @@ public sealed record FailureReport(
 	string AssessmentName,
 	AssessmentFailureReason Reason,
 	string Message,
-	string? Error);
+	string? Error)
+{
+	internal static FailureReport From(AssessmentFailure failure)
+		=> new(failure.CategoryName, failure.AssessmentName, failure.Reason, failure.Message, failure.InnerException?.Message);
+}

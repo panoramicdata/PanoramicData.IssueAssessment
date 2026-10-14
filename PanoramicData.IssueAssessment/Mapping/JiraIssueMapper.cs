@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Text;
 
 namespace PanoramicData.IssueAssessment.Mapping;
@@ -13,6 +14,18 @@ namespace PanoramicData.IssueAssessment.Mapping;
 /// </remarks>
 public static class JiraIssueMapper
 {
+	// ADF list types, and the wiki marker each nesting level adds.
+	private static readonly FrozenDictionary<string, string> ListMarkers = new Dictionary<string, string>(StringComparer.Ordinal)
+	{
+		["bulletList"] = "*",
+		["orderedList"] = "#",
+	}.ToFrozenDictionary(StringComparer.Ordinal);
+
+	// ADF nodes written as one line of inline text.
+	private static readonly FrozenSet<string> LineBlockTypes = FrozenSet.Create(
+		StringComparer.Ordinal,
+		"paragraph", "blockquote", "panel", "text", "mention", "inlineCard", "hardBreak");
+
 	/// <summary>
 	/// Maps a Jira REST issue.
 	/// </summary>
@@ -31,13 +44,7 @@ public static class JiraIssueMapper
 	/// <exception cref="ArgumentException">Thrown when the JSON has no <c>fields</c> object.</exception>
 	public static NormalizedIssue FromRestJson(JsonElement issue, Uri? baseUrl)
 	{
-		if (issue.ValueKind != JsonValueKind.Object
-			|| !issue.TryGetProperty("fields", out JsonElement fields)
-			|| fields.ValueKind != JsonValueKind.Object)
-		{
-			throw new ArgumentException("A Jira issue must be an object with a 'fields' object.", nameof(issue));
-		}
-
+		JsonElement fields = Fields(issue);
 		string? key = Text(issue, "key");
 		return new NormalizedIssue
 		{
@@ -52,14 +59,30 @@ public static class JiraIssueMapper
 			Components = Names(fields, "components"),
 			Labels = Strings(fields, "labels"),
 			FixVersions = Names(fields, "fixVersions"),
-			AttachmentsCount = fields.TryGetProperty("attachment", out JsonElement attachments) && attachments.ValueKind == JsonValueKind.Array
-				? attachments.GetArrayLength()
-				: 0,
+			AttachmentsCount = ArrayLength(fields, "attachment"),
 			DueDate = Text(fields, "duedate"),
-			Url = baseUrl is null || key is null ? null : new Uri(baseUrl, $"browse/{key}").ToString(),
+			Url = BrowseUrl(baseUrl, key),
 			Platform = "Jira",
 		};
 	}
+
+	private static JsonElement Fields(JsonElement issue)
+	{
+		if (issue.ValueKind == JsonValueKind.Object
+			&& issue.TryGetProperty("fields", out JsonElement fields)
+			&& fields.ValueKind == JsonValueKind.Object)
+		{
+			return fields;
+		}
+
+		throw new ArgumentException("A Jira issue must be an object with a 'fields' object.", nameof(issue));
+	}
+
+	private static int ArrayLength(JsonElement element, string name)
+		=> element.TryGetProperty(name, out JsonElement array) && array.ValueKind == JsonValueKind.Array ? array.GetArrayLength() : 0;
+
+	private static string? BrowseUrl(Uri? baseUrl, string? key)
+		=> baseUrl is null || key is null ? null : new Uri(baseUrl, $"browse/{key}").ToString();
 
 	/// <summary>
 	/// Flattens an Atlassian Document Format node to wiki-style text.
@@ -84,35 +107,43 @@ public static class JiraIssueMapper
 	private static void AppendBlock(JsonElement node, StringBuilder text, string listPrefix)
 	{
 		string type = Text(node, "type") ?? string.Empty;
-		switch (type)
+		if (ListMarkers.TryGetValue(type, out string? listMarker))
 		{
-			case "heading":
-				int level = node.TryGetProperty("attrs", out JsonElement attrs) && attrs.TryGetProperty("level", out JsonElement value) && value.TryGetInt32(out int parsed) ? parsed : 2;
-				text.Append(CultureInfo.InvariantCulture, $"h{level}. ").Append(Inline(node)).Append('\n');
-				break;
-			case "bulletList" or "orderedList":
-				string marker = listPrefix + (type == "bulletList" ? "*" : "#");
-				foreach (JsonElement item in Children(node))
-				{
-					AppendListItem(item, text, marker);
-				}
-
-				break;
-			case "codeBlock":
-				text.Append("{code}\n").Append(Inline(node)).Append("\n{code}\n");
-				break;
-			case "paragraph" or "blockquote" or "panel" or "text" or "mention" or "inlineCard" or "hardBreak":
-				text.Append(Inline(node)).Append('\n');
-				break;
-			default:
-				foreach (JsonElement child in Children(node))
-				{
-					AppendBlock(child, text, listPrefix);
-				}
-
-				break;
+			AppendList(node, text, listPrefix + listMarker);
+		}
+		else if (type == "heading")
+		{
+			text.Append(CultureInfo.InvariantCulture, $"h{AdfHeadingLevel(node)}. ").Append(Inline(node)).Append('\n');
+		}
+		else if (type == "codeBlock")
+		{
+			text.Append("{code}\n").Append(Inline(node)).Append("\n{code}\n");
+		}
+		else if (LineBlockTypes.Contains(type))
+		{
+			text.Append(Inline(node)).Append('\n');
+		}
+		else
+		{
+			foreach (JsonElement child in Children(node))
+			{
+				AppendBlock(child, text, listPrefix);
+			}
 		}
 	}
+
+	private static void AppendList(JsonElement list, StringBuilder text, string marker)
+	{
+		foreach (JsonElement item in Children(list))
+		{
+			AppendListItem(item, text, marker);
+		}
+	}
+
+	private static int AdfHeadingLevel(JsonElement heading)
+		=> heading.TryGetProperty("attrs", out JsonElement attrs) && attrs.TryGetProperty("level", out JsonElement value) && value.TryGetInt32(out int level)
+			? level
+			: 2;
 
 	private static void AppendListItem(JsonElement item, StringBuilder text, string marker)
 	{

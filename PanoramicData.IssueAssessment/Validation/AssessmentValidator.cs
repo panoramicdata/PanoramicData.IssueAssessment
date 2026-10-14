@@ -18,16 +18,7 @@ internal static class AssessmentValidator
 			throw new ArgumentException($"Category '{category.Name}' contains an assessment with no name.", nameof(assessment));
 		}
 
-		Exception? innerException = null;
-		string? error = AssessmentError(assessment);
-		if (error is null)
-		{
-			error = SelectorError(assessment.Definition, out innerException)
-				?? DefinitionError(assessment.Definition)
-				?? SettingsError(assessment)
-				?? RuleError(assessment, scope);
-		}
-
+		string? error = Error(assessment, scope, out Exception? innerException);
 		if (error is not null)
 		{
 			throw new ArgumentException(
@@ -35,6 +26,20 @@ internal static class AssessmentValidator
 				nameof(assessment),
 				innerException);
 		}
+	}
+
+	/// <summary>
+	/// The first problem with the assessment, checked in order: identity, selectors, definition settings, assessment
+	/// settings, then rules.
+	/// </summary>
+	private static string? Error(Assessment assessment, RuleScope scope, out Exception? innerException)
+	{
+		innerException = null;
+		return AssessmentError(assessment)
+			?? SelectorError(assessment.Definition, out innerException)
+			?? DefinitionError(assessment.Definition)
+			?? SettingsError(assessment)
+			?? RuleError(assessment, scope);
 	}
 
 	/// <summary>

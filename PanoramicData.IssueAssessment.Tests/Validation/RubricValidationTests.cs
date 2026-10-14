@@ -315,11 +315,11 @@ public class RubricValidationTests
 
 	private sealed class AlwaysTrue : ICondition
 	{
-		public bool Evaluate(EvaluationContext context) => true;
+		public bool Evaluate(EvaluationContext context) => context is not null;
 	}
 
 	private sealed class Seven : IMeasure
 	{
-		public double Evaluate(EvaluationContext context) => 7d;
+		public double Evaluate(EvaluationContext context) => context is null ? 0d : 7d;
 	}
 }

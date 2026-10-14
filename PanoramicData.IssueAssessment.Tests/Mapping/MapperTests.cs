@@ -8,7 +8,7 @@ namespace PanoramicData.IssueAssessment.Tests.Mapping;
 /// </summary>
 public class MapperTests
 {
-	private static JsonElement Json(string json) => JsonDocument.Parse(json).RootElement;
+	private static JsonElement Json(string text) => JsonDocument.Parse(text).RootElement;
 
 	[Fact]
 	public void Jira_V2Issue_MapsEveryField()

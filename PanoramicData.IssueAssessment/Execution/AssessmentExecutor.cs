@@ -43,42 +43,42 @@ internal static class AssessmentExecutor
 			return NotApplicable(assessment, scoped);
 		}
 
+		return new AssessmentExecutionItemResult(
+			AssessmentResult: Result(assessment, executionResult),
+			Failure: Failure(categoryName, assessment, executionResult),
+			VirtualDocument: executionResult.VirtualExtensionOutput);
+	}
+
+	/// <summary>
+	/// The scored result, with the recommendation when the assessment did not pass.
+	/// </summary>
+	private static AssessmentResult Result(Assessment assessment, AssessmentExecutionResult executionResult)
+	{
 		(double minPossibleRaw, double maxPossibleRaw) = ScoreCalculator.CalculateAssessmentRawRange(assessment);
 		double? normalizedScore = executionResult.RawScore.HasValue
 			? ScoreCalculator.Normalize(executionResult.RawScore.Value, minPossibleRaw, maxPossibleRaw)
 			: null;
 
-		AssessmentScore score = new(
-			RawScore: executionResult.RawScore,
-			NormalizedScore: normalizedScore,
-			MinPossibleRaw: minPossibleRaw,
-			MaxPossibleRaw: maxPossibleRaw);
-
-		AssessmentResult assessmentResult = new(
+		AssessmentResult result = new(
 			AssessmentName: assessment.Name,
-			Score: score,
+			Score: new AssessmentScore(executionResult.RawScore, normalizedScore, minPossibleRaw, maxPossibleRaw),
 			ExplanationText: executionResult.ExplanationText ?? string.Empty,
 			FailureReason: executionResult.FailureReason,
 			InnerException: executionResult.InnerException);
-		if (assessmentResult.Outcome != AssessmentOutcome.Passed)
-		{
-			assessmentResult = assessmentResult with { Recommendation = executionResult.Recommendation ?? assessment.Recommendation };
-		}
+		return result.Outcome == AssessmentOutcome.Passed
+			? result
+			: result with { Recommendation = executionResult.Recommendation ?? assessment.Recommendation };
+	}
 
-		AssessmentFailure? failure = executionResult.FailureReason is null
-			? null
-			: new AssessmentFailure(
+	private static AssessmentFailure? Failure(string categoryName, Assessment assessment, AssessmentExecutionResult executionResult)
+		=> executionResult.FailureReason is { } reason
+			? new AssessmentFailure(
 				CategoryName: categoryName,
 				AssessmentName: assessment.Name,
-				Reason: executionResult.FailureReason.Value,
+				Reason: reason,
 				Message: executionResult.ExplanationText ?? "Assessment failed.",
-				InnerException: executionResult.InnerException);
-
-		return new AssessmentExecutionItemResult(
-			AssessmentResult: assessmentResult,
-			Failure: failure,
-			VirtualDocument: executionResult.VirtualExtensionOutput);
-	}
+				InnerException: executionResult.InnerException)
+			: null;
 
 	private static AssessmentExecutionItemResult NotApplicable(Assessment assessment, EvaluationContext context)
 		=> new(

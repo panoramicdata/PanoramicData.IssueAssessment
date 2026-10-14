@@ -117,21 +117,8 @@ public static class IssueText
 			return [];
 		}
 
-		bool isWiki = WikiHeadingAnywhere.IsMatch(text);
 		string[] lines = LineBreak.Split(text);
-		List<(int Index, int Level, string Text)> headings = [];
-		for (int index = 0; index < lines.Length; index++)
-		{
-			Match match = CriteriaHeadingLine.Match(lines[index]);
-			if (match.Success && !(isWiki && StartsWithSingleHashItem.IsMatch(lines[index])))
-			{
-				int level = match.Groups[1].Success
-					? int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture)
-					: match.Groups[2].Success ? match.Groups[2].Value.Length : 7;
-				headings.Add((index, level, match.Groups[3].Value.Trim().Trim('*').Trim().TrimEnd(':').Trim()));
-			}
-		}
-
+		List<(int Index, int Level, string Text)> headings = Headings(lines, WikiHeadingAnywhere.IsMatch(text));
 		List<string> found = [];
 		for (int current = 0; current < headings.Count; current++)
 		{
@@ -197,6 +184,34 @@ public static class IssueText
 		return atx.Success ? atx.Groups[1].Value.Length : 7;
 	}
 
+	/// <summary>
+	/// Every heading line, with its index and level; in wiki text a single <c>#</c> line is a list item, not a heading.
+	/// </summary>
+	private static List<(int Index, int Level, string Text)> Headings(string[] lines, bool isWiki)
+	{
+		List<(int Index, int Level, string Text)> headings = [];
+		for (int index = 0; index < lines.Length; index++)
+		{
+			Match match = CriteriaHeadingLine.Match(lines[index]);
+			if (match.Success && !(isWiki && StartsWithSingleHashItem.IsMatch(lines[index])))
+			{
+				headings.Add((index, HeadingLevel(match), match.Groups[3].Value.Trim().Trim('*').Trim().TrimEnd(':').Trim()));
+			}
+		}
+
+		return headings;
+	}
+
+	private static int HeadingLevel(Match criteriaHeading)
+	{
+		if (criteriaHeading.Groups[1].Success)
+		{
+			return int.Parse(criteriaHeading.Groups[1].Value, CultureInfo.InvariantCulture);
+		}
+
+		return criteriaHeading.Groups[2].Success ? criteriaHeading.Groups[2].Value.Length : 7;
+	}
+
 	private static bool IsWikiTextOpening(string text, Match opening)
 	{
 		if (!StartsWithHash.IsMatch(opening.Value))
@@ -215,23 +230,7 @@ public static class IssueText
 		bool openedByWiki = StartsWithWiki.IsMatch(opener);
 		if (openedByWiki || StartsWithHash.IsMatch(opener))
 		{
-			// Levelled: close at a heading of the same level or stronger, never a weaker one.
-			int openLevel = HeadingLevel(opener);
-			foreach (Match candidate in (openedByWiki ? WikiNext : AtxNext).Matches(rest))
-			{
-				if (openedByWiki && StartsWithHash.IsMatch(candidate.Value) && PreviousLineIsHashList(rest[..candidate.Index]))
-				{
-					// A "## " line continuing a "#" list is a nested wiki list item, not a Markdown heading.
-					continue;
-				}
-
-				if (HeadingLevel(candidate.Value) <= openLevel)
-				{
-					return rest[..candidate.Index];
-				}
-			}
-
-			return rest;
+			return LevelledSectionAfter(opener, rest, openedByWiki);
 		}
 
 		Regex closer = StartsWithDoubleAsterisk.IsMatch(opener) ? Bold2Next
@@ -239,6 +238,26 @@ public static class IssueText
 			: LabelNext;
 		Match next = closer.Match(rest);
 		return next.Success ? rest[..next.Index] : rest;
+	}
+
+	/// <summary>
+	/// Cuts <paramref name="rest"/> at the next heading of the same level as <paramref name="opener"/> or stronger, never
+	/// at a weaker one.
+	/// </summary>
+	private static string LevelledSectionAfter(string opener, string rest, bool openedByWiki)
+	{
+		int openLevel = HeadingLevel(opener);
+		foreach (Match candidate in (openedByWiki ? WikiNext : AtxNext).Matches(rest))
+		{
+			// A "## " line continuing a "#" list is a nested wiki list item, not a Markdown heading.
+			bool continuesWikiList = openedByWiki && StartsWithHash.IsMatch(candidate.Value) && PreviousLineIsHashList(rest[..candidate.Index]);
+			if (!continuesWikiList && HeadingLevel(candidate.Value) <= openLevel)
+			{
+				return rest[..candidate.Index];
+			}
+		}
+
+		return rest;
 	}
 
 	private static bool PreviousLineIsHashList(string before)

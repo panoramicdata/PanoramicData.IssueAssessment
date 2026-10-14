@@ -28,22 +28,18 @@ public static partial class GitHubIssueMapper
 			throw new ArgumentException("A GitHub issue must be an object.", nameof(issue));
 		}
 
-		ImmutableList<string> labels = issue.TryGetProperty("labels", out JsonElement labelArray) && labelArray.ValueKind == JsonValueKind.Array
-			? [.. labelArray.EnumerateArray().Select(label => label.ValueKind == JsonValueKind.String ? label.GetString() : Text(label, "name")).OfType<string>()]
-			: [];
+		ImmutableList<string> labels = Labels(issue);
 		string body = Text(issue, "body") ?? string.Empty;
 
 		return new NormalizedIssue
 		{
-			Key = issue.TryGetProperty("number", out JsonElement number) && number.ValueKind == JsonValueKind.Number ? $"#{number.GetRawText()}" : null,
+			Key = Key(issue),
 			Title = Text(issue, "title"),
 			Description = body,
 			IssueType = IssueType(labels),
 			Priority = Priority(labels),
 			Status = Text(issue, "state"),
-			Assignee = issue.TryGetProperty("assignees", out JsonElement assignees) && assignees.ValueKind == JsonValueKind.Array && assignees.GetArrayLength() > 0
-				? Text(assignees[0], "login")
-				: null,
+			Assignee = FirstAssignee(issue),
 			Components = Components(labels),
 			Labels = labels,
 			AttachmentsCount = MarkdownImage().Count(body) + ImageUrl().Count(body),
@@ -53,6 +49,19 @@ public static partial class GitHubIssueMapper
 			Platform = "GitHub",
 		};
 	}
+
+	private static ImmutableList<string> Labels(JsonElement issue)
+		=> issue.TryGetProperty("labels", out JsonElement labels) && labels.ValueKind == JsonValueKind.Array
+			? [.. labels.EnumerateArray().Select(label => label.ValueKind == JsonValueKind.String ? label.GetString() : Text(label, "name")).OfType<string>()]
+			: [];
+
+	private static string? Key(JsonElement issue)
+		=> issue.TryGetProperty("number", out JsonElement number) && number.ValueKind == JsonValueKind.Number ? $"#{number.GetRawText()}" : null;
+
+	private static string? FirstAssignee(JsonElement issue)
+		=> issue.TryGetProperty("assignees", out JsonElement assignees) && assignees.ValueKind == JsonValueKind.Array && assignees.GetArrayLength() > 0
+			? Text(assignees[0], "login")
+			: null;
 
 	private static string IssueType(ImmutableList<string> labels)
 	{

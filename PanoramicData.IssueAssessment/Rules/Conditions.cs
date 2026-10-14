@@ -97,8 +97,21 @@ public sealed record MeasureCondition : ICondition
 	{
 		ArgumentNullException.ThrowIfNull(context);
 		double value = Of?.Evaluate(context) ?? context.Measure(Measure!);
-		return (AtLeast is not { } low || value >= low) && (LessThan is not { } high || value < high);
+		return Bounds.Contain(value, AtLeast, LessThan);
 	}
+}
+
+/// <summary>
+/// The optional bounds conditions compare a value against.
+/// </summary>
+internal static class Bounds
+{
+	/// <summary>
+	/// True when <paramref name="value"/> is at least <paramref name="atLeast"/> and less than
+	/// <paramref name="lessThan"/>; an unset bound always holds.
+	/// </summary>
+	public static bool Contain(double value, double? atLeast, double? lessThan)
+		=> (atLeast is not { } low || value >= low) && (lessThan is not { } high || value < high);
 }
 
 /// <summary>
@@ -259,7 +272,6 @@ public sealed record AssessmentScoreCondition : ICondition
 		return context.AssessmentResults.TryGetValue(Assessment, out AssessmentResult? result)
 			&& result.Outcome != AssessmentOutcome.NotApplicable
 			&& result.Score.RawScore is { } score
-			&& (AtLeast is not { } low || score >= low)
-			&& (LessThan is not { } high || score < high);
+			&& Bounds.Contain(score, AtLeast, LessThan);
 	}
 }
