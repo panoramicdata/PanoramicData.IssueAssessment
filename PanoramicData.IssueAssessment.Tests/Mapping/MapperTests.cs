@@ -121,6 +121,40 @@ public class MapperTests
 	}
 
 	[Fact]
+	public void Jira_V3Description_ListItemParagraphsAndAttributelessNodes_Flatten()
+	{
+		NormalizedIssue issue = JiraIssueMapper.FromRestJson(Json("""
+			{
+				"fields": {
+					"description": {
+						"type": "doc",
+						"content": [
+							{ "type": "bulletList", "content": [ { "type": "listItem", "content": [
+								{ "type": "paragraph", "content": [ { "type": "text", "text": "first" } ] },
+								{ "type": "paragraph", "content": [ { "type": "text" }, { "type": "text", "text": "second" } ] }
+							] } ] },
+							{ "type": "paragraph", "content": [
+								{ "type": "mention", "attrs": {} },
+								{ "type": "emoji", "attrs": { "shortName": ":)" } },
+								{ "type": "inlineCard", "attrs": {} },
+								{ "type": "text", "text": "end" }
+							] }
+						]
+					}
+				}
+			}
+			"""));
+
+		issue.Description.Should().Be("* first\nsecond\nend");
+	}
+
+	[Fact]
+	public void Jira_NoDescription_IsNull()
+	{
+		JiraIssueMapper.FromRestJson(Json("""{ "fields": {} }""")).Description.Should().BeNull();
+	}
+
+	[Fact]
 	public void FlattenAdf_NonObjectNode_ReturnsEmpty()
 	{
 		JiraIssueMapper.FlattenAdf(Json("[1]")).Should().BeEmpty();

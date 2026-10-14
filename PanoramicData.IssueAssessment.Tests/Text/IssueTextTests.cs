@@ -27,6 +27,10 @@ public class IssueTextTests
 		{ "Steps to reproduce:\n1. open\nExpected result:\nx", "\n1. open\n" },
 		// Heading without a closer runs to the end.
 		{ "Intro\n## Repro\nall the rest", "\nall the rest" },
+		// Bold heading without a closer runs to the end.
+		{ "**Steps to reproduce**\n1. open\n2. export", "\n1. open\n2. export" },
+		// A Markdown heading on the first line of wiki text has no previous line to continue.
+		{ "## Repro\nbody\nh2. Next\nx", "\nbody\n" },
 		{ "No heading here", null },
 		{ "   ", null },
 	};
