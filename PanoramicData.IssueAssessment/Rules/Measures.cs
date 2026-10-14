@@ -156,9 +156,10 @@ public sealed record NumberMeasure : IMeasure
 
 /// <summary>
 /// How many headings in the text open an acceptance-criteria section (see
-/// <see cref="IssueText.CriteriaHeadings"/>). More than one means the criteria are stated twice.
+/// <see cref="IssueText.CriteriaHeadings"/>). More than one means the criteria are stated twice. Described as the
+/// headings' text, separated by semicolons.
 /// </summary>
-public sealed record CriteriaHeadingCountMeasure : IMeasure
+public sealed record CriteriaHeadingCountMeasure : IMeasure, IDescribedMeasure
 {
 	/// <summary>Gets the text to search.</summary>
 	public required TextSource Source { get; init; }
@@ -169,4 +170,22 @@ public sealed record CriteriaHeadingCountMeasure : IMeasure
 		ArgumentNullException.ThrowIfNull(context);
 		return IssueText.CriteriaHeadings(context.Text(Source)).Count;
 	}
+
+	/// <inheritdoc />
+	public string Describe(EvaluationContext context)
+	{
+		ArgumentNullException.ThrowIfNull(context);
+		return string.Join("; ", IssueText.CriteriaHeadings(context.Text(Source)));
+	}
+}
+
+/// <summary>
+/// A measure that can also describe what it measured, for <c>{name:text}</c> placeholders in tier findings.
+/// </summary>
+public interface IDescribedMeasure
+{
+	/// <summary>
+	/// Describes what was measured for the issue in <paramref name="context"/>.
+	/// </summary>
+	string Describe(EvaluationContext context);
 }

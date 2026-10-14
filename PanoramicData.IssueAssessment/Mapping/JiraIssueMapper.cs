@@ -57,6 +57,7 @@ public static class JiraIssueMapper
 				: 0,
 			DueDate = Text(fields, "duedate"),
 			Url = baseUrl is null || key is null ? null : new Uri(baseUrl, $"browse/{key}").ToString(),
+			Platform = "Jira",
 		};
 	}
 

@@ -40,7 +40,7 @@ internal static class AssessmentExecutor
 		AssessmentExecutionResult? executionResult = await RunAsync(assessment, scoped, cancellationToken).ConfigureAwait(false);
 		if (executionResult is null)
 		{
-			return NotApplicable(assessment);
+			return NotApplicable(assessment, scoped);
 		}
 
 		(double minPossibleRaw, double maxPossibleRaw) = ScoreCalculator.CalculateAssessmentRawRange(assessment);
@@ -80,12 +80,14 @@ internal static class AssessmentExecutor
 			VirtualDocument: executionResult.VirtualExtensionOutput);
 	}
 
-	private static AssessmentExecutionItemResult NotApplicable(Assessment assessment)
+	private static AssessmentExecutionItemResult NotApplicable(Assessment assessment, EvaluationContext context)
 		=> new(
 			AssessmentResult: new AssessmentResult(
 				AssessmentName: assessment.Name,
 				Score: new AssessmentScore(null, null, 0d, 0d),
-				ExplanationText: assessment.NotApplicableExplanation ?? string.Empty,
+				ExplanationText: assessment.NotApplicableExplanation is { } explanation
+					? PlaceholderText.Format(explanation, context, ImmutableDictionary<string, IMeasure>.Empty)
+					: string.Empty,
 				FailureReason: null,
 				InnerException: null)
 			{

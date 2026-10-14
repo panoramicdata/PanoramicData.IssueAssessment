@@ -50,6 +50,7 @@ public static partial class GitHubIssueMapper
 			SupportsFixVersion = false,
 			DueDate = issue.TryGetProperty("milestone", out JsonElement milestone) ? Text(milestone, "due_on") : null,
 			Url = Text(issue, "html_url"),
+			Platform = "GitHub",
 		};
 	}
 

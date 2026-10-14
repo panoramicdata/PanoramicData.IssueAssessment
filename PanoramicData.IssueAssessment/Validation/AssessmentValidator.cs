@@ -42,6 +42,9 @@ internal static class AssessmentValidator
 	/// </summary>
 	private static string? RuleError(Assessment assessment, RuleScope scope)
 		=> RuleValidator.ConditionError(assessment.AppliesWhen, scope)
+			?? PlaceholderText.Keys(assessment.NotApplicableExplanation)
+				.Select(key => key.StartsWith('$') ? RuleValidator.PathError(key) : $"has a not-applicable explanation placeholder '{{{key}}}' that is not a JSONPath.")
+				.FirstOrDefault(error => error is not null)
 			?? assessment.Definition switch
 			{
 				TieredAssessment tiered => TieredValidator.Error(tiered, scope),

@@ -41,6 +41,7 @@ public static class ServiceNowRecordMapper
 			SupportsFixVersion = false,
 			SupportsComponents = false,
 			DueDate = Value(record, "due_date"),
+			Platform = "ServiceNow",
 		};
 	}
 

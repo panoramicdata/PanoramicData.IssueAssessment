@@ -37,9 +37,9 @@ internal static class TieredValidator
 
 	private static string? TierError(TieredAssessment tiered, Tier tier, RuleScope scope)
 	{
-		if (string.IsNullOrWhiteSpace(tier.Finding))
+		if (tier.Finding is null)
 		{
-			return "has a tier without a finding.";
+			return "has a tier without a finding; use an empty finding for a tier that only recommends.";
 		}
 
 		if (tier.Score < tiered.MinimumScore || tier.Score > tiered.MaximumScore)
@@ -55,9 +55,17 @@ internal static class TieredValidator
 	}
 
 	private static string? PlaceholderError(string? text, RuleScope scope)
-		=> TieredAssessment.Placeholders(text)
-			.Select(key => key.StartsWith('$')
-				? RuleValidator.PathError(key)
-				: scope.MeasureNames.Contains(key) ? null : $"refers to undefined measure '{key}' in a placeholder.")
-			.FirstOrDefault(error => error is not null);
+		=> PlaceholderText.Keys(text).Select(key => PlaceholderKeyError(key, scope)).FirstOrDefault(error => error is not null);
+
+	private static string? PlaceholderKeyError(string key, RuleScope scope)
+	{
+		if (key.StartsWith('$'))
+		{
+			int tilde = key.IndexOf('~', StringComparison.Ordinal);
+			return tilde < 0 ? RuleValidator.PathError(key) : RuleValidator.PathError(key[..tilde]) ?? RuleValidator.PatternError(key[(tilde + 1)..]);
+		}
+
+		string name = key.EndsWith(":text", StringComparison.Ordinal) ? key[..^":text".Length] : key;
+		return scope.MeasureNames.Contains(name) ? null : $"refers to undefined measure '{name}' in a placeholder.";
+	}
 }

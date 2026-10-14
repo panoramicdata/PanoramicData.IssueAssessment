@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 
 namespace PanoramicData.IssueAssessment.Assessments;
 
@@ -13,8 +12,10 @@ namespace PanoramicData.IssueAssessment.Assessments;
 /// issue lands in some tier.
 /// </para>
 /// <para>
-/// Findings and recommendations may contain placeholders: <c>{name}</c> is replaced by the value of a measure and
-/// <c>{$.path}</c> by the values at a JSONPath, comma-separated.
+/// Findings and recommendations may contain placeholders: <c>{name}</c> is replaced by the value of a measure,
+/// <c>{name:text}</c> by a described measure's text (for example the duplicated criteria headings),
+/// <c>{$.path}</c> by the values at a JSONPath, comma-separated, and <c>{$.path~pattern}</c> by the first of them that
+/// matches the pattern. A finding may be empty, for a tier that only recommends.
 /// </para>
 /// </remarks>
 /// <example>
@@ -32,7 +33,7 @@ namespace PanoramicData.IssueAssessment.Assessments;
 /// }
 /// </code>
 /// </example>
-public sealed partial record TieredAssessment : IAssessmentDefinition, IContextualAssessmentDefinition
+public sealed record TieredAssessment : IAssessmentDefinition, IContextualAssessmentDefinition
 {
 	/// <summary>
 	/// Gets measures the tiers can refer to by name.
@@ -85,23 +86,7 @@ public sealed partial record TieredAssessment : IAssessmentDefinition, IContextu
 		});
 	}
 
-	/// <summary>
-	/// The names of the measures and JSONPaths the placeholders in <paramref name="text"/> refer to.
-	/// </summary>
-	internal static IEnumerable<string> Placeholders(string? text)
-		=> text is null ? [] : PlaceholderPattern().Matches(text).Select(match => match.Groups[1].Value);
-
-	private static string Format(string text, EvaluationContext context)
-		=> PlaceholderPattern().Replace(text, match =>
-		{
-			string key = match.Groups[1].Value;
-			return key.StartsWith('$')
-				? string.Join(", ", context.Strings(key))
-				: context.Measure(key).ToString(CultureInfo.InvariantCulture);
-		});
-
-	[GeneratedRegex(@"\{([^{}\s]+)\}", RegexOptions.CultureInvariant, 1000)]
-	private static partial Regex PlaceholderPattern();
+	private string Format(string text, EvaluationContext context) => PlaceholderText.Format(text, context, Measures);
 }
 
 /// <summary>

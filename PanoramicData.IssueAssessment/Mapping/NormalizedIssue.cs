@@ -71,6 +71,9 @@ public sealed partial record NormalizedIssue
 	/// <summary>Gets a link to the issue.</summary>
 	public string? Url { get; init; }
 
+	/// <summary>Gets the system the issue came from, such as Jira, GitHub or ServiceNow.</summary>
+	public string? Platform { get; init; }
+
 	/// <summary>
 	/// The project key from an issue key such as <c>MS-1234</c>, or null.
 	/// </summary>
@@ -116,6 +119,7 @@ public sealed partial record NormalizedIssue
 		Add(issue, "acceptanceCriteria", AcceptanceCriteria);
 		Add(issue, "reproductionSteps", ReproductionSteps);
 		Add(issue, "url", Url);
+		Add(issue, "platform", Platform);
 		return issue;
 	}
 

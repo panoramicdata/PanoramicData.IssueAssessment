@@ -26,6 +26,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<EmbeddedResource Include="Rubrics\*.json" LogicalName="PanoramicData.IssueAssessment.Rubrics.%(Filename)%(Extension)" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<None Include="Icon.png" Pack="true" PackagePath="" />
 		<None Include="..\README.md" Link="README.md" Pack="true" PackagePath="" />
 	</ItemGroup>
