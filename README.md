@@ -81,9 +81,23 @@ The built-in categories read a small normalized shape:
 | `assigneeState` | `Assigned`, `InProgress` or `Owned` when someone has taken it |
 | `dueDate` | Any date or date-time string (`2026-11-20`, `2026-11-20T17:00:00Z`) |
 
-Map your platform's JSON to that shape before assessing. The
-[Examples project](PanoramicData.IssueAssessment.Examples) has complete, runnable mappers for the Jira REST API v2,
-the GitHub REST API and the ServiceNow Table API, including two details that matter in practice:
+Map your platform's JSON to that shape before assessing. Since 1.1 the package includes mappers to
+`NormalizedIssue`, which also carries issue type, priority, status, project, components, labels, fix versions and
+an attachment count:
+
+```csharp
+using PanoramicData.IssueAssessment.Mapping;
+
+NormalizedIssue issue = JiraIssueMapper.FromRestJson(jiraIssueJson, new Uri("https://jira.example.com/"));
+// or GitHubIssueMapper.FromRestJson(githubIssueJson), ServiceNowRecordMapper.FromTableJson(recordJson)
+using JsonDocument ticket = issue.ToJsonDocument();
+```
+
+`JiraIssueMapper` reads REST API v2 (wiki text) and v3 (Atlassian Document Format, flattened to wiki text). If you
+already hold typed objects, such as a Jira client's `Issue`, set the `NormalizedIssue` properties directly.
+
+The [Examples project](PanoramicData.IssueAssessment.Examples) has complete, runnable mappers for the Jira REST
+API v2, the GitHub REST API and the ServiceNow Table API, including two details that matter in practice:
 
 - GitHub has no fields for reproduction steps or acceptance criteria, so they are read from the headed sections
   that issue templates produce.
@@ -95,6 +109,94 @@ Your own assessments can of course read any JSONPath in the raw ticket directly.
 ```bash
 dotnet run --project PanoramicData.IssueAssessment.Examples
 ```
+
+## Rubrics
+
+A rubric is a whole configuration written as JSON: categories, assessments, named conditions, score caps, grade
+bands and classifications. It suits teams that share one definition of a good ticket between several tools.
+
+### The built-in ticket-quality rubric
+
+`BuiltInRubrics.PanoramicDataTicketQuality` is the rubric Panoramic Data uses for Jira and GitHub tickets. It
+scores components, description, testability, steps to reproduce, current versus expected behaviour, environment,
+attachments, documentation, certifications, UI consistency, business case and rollback plan for ordinary tickets,
+and a separate set of criteria for epics. It grades the result EXCELLENT, GOOD, ADEQUATE, NEEDS IMPROVEMENT or
+POOR, and caps a ticket below EXCELLENT when a mandatory element (steps to reproduce on a bug, a rollback plan on a
+change request) is missing.
+
+```csharp
+using PanoramicData.IssueAssessment.Rubrics;
+
+var assessor = new IssueAssessor(BuiltInRubrics.PanoramicDataTicketQuality);
+AssessmentReport report = AssessmentReport.From(await assessor.AssessAsync(ticket, cancellationToken));
+
+Console.WriteLine($"{report.Score}/100 {report.Grade}");
+report.Findings.ForEach(Console.WriteLine);         // "✓ Steps to Reproduce: 3 numbered steps", ...
+report.Recommendations.ForEach(Console.WriteLine);  // what to add to raise the score
+Console.WriteLine(report.ToJson());
+```
+
+`BuiltInRubrics.PanoramicDataTicketQualityJson` returns its JSON, a good starting point for your own.
+
+### Writing a rubric
+
+```jsonc
+{
+	"executionStrategy": "series",
+	"conditions": {
+		"isBug": { "type": "fieldEquals", "path": "$.issueType", "values": [ "Bug", "Defect" ] }
+	},
+	"categories": [ {
+		"name": "Ticket Quality", "description": "Is the ticket ready to work on?", "assessmentExecutionStrategy": "series",
+		"assessments": [ {
+			"name": "Steps to reproduce", "description": "Bugs say how to reproduce them",
+			"appliesWhen": { "type": "ref", "name": "isBug" },
+			"recommendation": "Add numbered steps to reproduce.",
+			"definition": {
+				"type": "tiered",
+				"measures": {
+					"steps": { "type": "occurrenceCount", "source": { "paths": [ "$.description" ], "section": "reproduc" }, "pattern": "(?m)^\\s*\\d+\\." }
+				},
+				"tiers": [
+					{ "when": { "type": "measure", "measure": "steps", "atLeast": 3 }, "score": 100, "finding": "✓ {steps} steps to reproduce" },
+					{ "when": { "type": "sectionPresent", "source": { "paths": [ "$.description" ], "section": "reproduc" } }, "score": 50, "finding": "⚠ Steps are not a numbered list" },
+					{ "score": 0, "finding": "✗ No steps to reproduce" }
+				]
+			}
+		} ]
+	} ],
+	"scoreCaps": [ { "name": "Steps to reproduce", "cap": 0.79, "group": "mandatory",
+		"when": { "type": "assessmentScore", "assessment": "Steps to reproduce", "lessThan": 100 } } ],
+	"gradeBands": [ { "name": "GOOD", "minimumScore": 0.6 }, { "name": "POOR", "minimumScore": 0 } ]
+}
+```
+
+```csharp
+AssessmentOptions options = AssessmentRubric.Load(File.ReadAllText("rubric.json"));
+```
+
+The building blocks:
+
+- **Tiered assessments** (`"type": "tiered"`): tiers are tried in order and the first whose `when` holds gives the
+  score (0–100 by default), the finding and an optional recommendation. The last tier has no condition.
+- **Measures** count things: `patternMatchCount`, `occurrenceCount`, `wordCount`, `alphanumericCount`, `length`,
+  `itemCount`, `number` and `criteriaHeadingCount`.
+- **Conditions**: `all`, `any`, `not`, `ref` (a named condition), `measure`, `textMatches`, `fieldMatches`,
+  `fieldEquals`, `fieldPresent`, `sectionPresent`, `placeholder` (a section that only says "TBD") and, for caps and
+  classifications, `assessmentScore`.
+- **Text sources** join one or more fields and can narrow to a section by heading, in Jira wiki or Markdown.
+- **Placeholders** in findings and recommendations: `{measure}`, `{measure:text}`, `{$.path}` and
+  `{$.path~pattern}` (the first value matching the pattern).
+- **Applicability**: `appliesWhen` on an assessment or a category. An assessment that does not apply is reported as
+  `NotApplicable` (with its `notApplicableExplanation`) and is left out of the score entirely.
+- **Category weights**, **score caps** (the lowest applicable cap wins), **grade bands** and **classifications**
+  (first matching rule gives the value). Named conditions are reported back as flags.
+
+Every rule is validated when `IssueAssessor` is constructed, as below. Definitions written in code can sit in a
+rubric as `{ "type": "named", "name": "..." }` and be supplied to `AssessmentRubric.Load(json, namedDefinitions)`.
+
+The text tools the rubric uses are public too: `IssueText.SectionBody`, `CriteriaHeadings`, `IsPlaceholder`,
+`WordCount` and `AlphanumericCount`.
 
 ## Concepts
 
@@ -265,8 +367,9 @@ thread): median 0.22 ms, 95th percentile 0.49 ms, 99th percentile 0.95 ms per ti
 
 ## Quality
 
-- 545 unit tests; 100% line coverage of the library (the one unmeasured branch is the compiler-generated null check
-  in `await foreach`).
+- 815 unit tests; 100% line coverage of the library.
+- The built-in rubric reproduces the scores, grades, findings and recommendations of the PowerShell engine it
+  replaced on all 74 of that engine's test fixtures and on 320 real Jira tickets.
 - Builds with zero warnings under `TreatWarningsAsErrors` and the `latest-recommended` analyzers.
 - CodeQL and Codacy analysis on every push.
 
