@@ -96,6 +96,13 @@
         }
       ]
     },
+    "hasPanelableSections": {
+      "type": "all",
+      "conditions": [
+        { "type": "fieldEquals", "path": "$.platform", "values": [ "Jira" ] },
+        { "type": "measure", "atLeast": 2, "of": { "type": "sectionPanelCount", "source": { "paths": [ "$.description" ] }, "count": "panelable" } }
+      ]
+    },
     "isCliRelated": { "type": "textMatches", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "magicsuite\\s+cli", "ms\\s+cli", "command[\\s-]?line", "msmagic", "cli\\s+command", "--\\w+", "invoke[\\s-]command" ] },
     "hasCliLabel": { "type": "fieldMatches", "path": "$.labels", "patterns": [ "CLI|Command" ] },
     "hasCliComponent": { "type": "fieldMatches", "path": "$.components", "patterns": [ "CLI" ] },
@@ -339,6 +346,27 @@
           }
         },
         {
+          "name": "Presentation",
+          "description": "Each section sits in an untitled panel directly under its h2 heading, so the layout can be scanned and found again; sections holding a table or code block are exempt.",
+          "weight": 8,
+          "appliesWhen": { "type": "ref", "name": "hasPanelableSections" },
+          "definition": {
+            "type": "tiered",
+            "measures": {
+              "panelable": { "type": "sectionPanelCount", "source": { "paths": [ "$.description" ] }, "count": "panelable" },
+              "panelled": { "type": "sectionPanelCount", "source": { "paths": [ "$.description" ] }, "count": "panelled" },
+              "unpanelled": { "type": "sectionPanelCount", "source": { "paths": [ "$.description" ] }, "count": "unpanelled" },
+              "titled": { "type": "sectionPanelCount", "source": { "paths": [ "$.description" ] }, "count": "titled" }
+            },
+            "tiers": [
+              { "when": { "type": "all", "conditions": [ { "type": "measure", "measure": "unpanelled", "lessThan": 1 }, { "type": "measure", "measure": "titled", "lessThan": 1 } ] }, "score": 100, "finding": "✓ Presentation: {panelled} sections in untitled panels" },
+              { "when": { "type": "measure", "measure": "unpanelled", "lessThan": 1 }, "score": 70, "finding": "⚠ Presentation: {titled} panel titles repeat their heading ({titled:text})", "recommendation": "Remove the title from each panel that sits directly under a heading, since the heading already names it: keep only the background colour, as in panel:bgColor=#F4F5F7" },
+              { "when": { "type": "measure", "measure": "panelled", "atLeast": 1 }, "score": 50, "finding": "⚠ Presentation: {unpanelled} of {panelable} sections are not in a panel ({unpanelled:text})", "recommendation": "Put the content of each section in an untitled panel directly under its heading; a section holding a table or code block can stay as it is" },
+              { "score": 20, "finding": "✗ Presentation: None of {panelable} sections is in a panel ({unpanelled:text})", "recommendation": "Put the content of each section in an untitled panel directly under its heading, for example one with only a background colour, panel:bgColor=#F4F5F7; a section holding a table or code block can stay as it is" }
+            ]
+          }
+        },
+        {
           "name": "CriteriaDuplication",
           "description": "Acceptance criteria are stated under one heading only. It carries no weight; duplication caps the score instead.",
           "weight": 0,
@@ -474,6 +502,27 @@
               { "when": { "type": "measure", "measure": "attachments", "atLeast": 1 }, "score": 100, "finding": "✓ Attachments: {attachments} item(s)" },
               { "when": { "type": "textMatches", "source": { "paths": [ "$.description" ] }, "patterns": [ "!\\[|screenshot|image|diagram|http.*\\.(png|jpg|gif)" ] }, "score": 70, "finding": "✓ Attachments: Inline images/diagrams found" },
               { "score": 30, "finding": "⚠ Attachments: None (diagrams/mockups recommended for epics)", "recommendation": "Consider adding architecture diagrams or mockups" }
+            ]
+          }
+        },
+        {
+          "name": "EpicPresentation",
+          "description": "Each section sits in an untitled panel directly under its h2 heading, so the layout can be scanned and found again; sections holding a table or code block are exempt.",
+          "weight": 8,
+          "appliesWhen": { "type": "ref", "name": "hasPanelableSections" },
+          "definition": {
+            "type": "tiered",
+            "measures": {
+              "panelable": { "type": "sectionPanelCount", "source": { "paths": [ "$.description" ] }, "count": "panelable" },
+              "panelled": { "type": "sectionPanelCount", "source": { "paths": [ "$.description" ] }, "count": "panelled" },
+              "unpanelled": { "type": "sectionPanelCount", "source": { "paths": [ "$.description" ] }, "count": "unpanelled" },
+              "titled": { "type": "sectionPanelCount", "source": { "paths": [ "$.description" ] }, "count": "titled" }
+            },
+            "tiers": [
+              { "when": { "type": "all", "conditions": [ { "type": "measure", "measure": "unpanelled", "lessThan": 1 }, { "type": "measure", "measure": "titled", "lessThan": 1 } ] }, "score": 100, "finding": "✓ Presentation: {panelled} sections in untitled panels" },
+              { "when": { "type": "measure", "measure": "unpanelled", "lessThan": 1 }, "score": 70, "finding": "⚠ Presentation: {titled} panel titles repeat their heading ({titled:text})", "recommendation": "Remove the title from each panel that sits directly under a heading, since the heading already names it: keep only the background colour, as in panel:bgColor=#F4F5F7" },
+              { "when": { "type": "measure", "measure": "panelled", "atLeast": 1 }, "score": 50, "finding": "⚠ Presentation: {unpanelled} of {panelable} sections are not in a panel ({unpanelled:text})", "recommendation": "Put the content of each section in an untitled panel directly under its heading; a section holding a table or code block can stay as it is" },
+              { "score": 20, "finding": "✗ Presentation: None of {panelable} sections is in a panel ({unpanelled:text})", "recommendation": "Put the content of each section in an untitled panel directly under its heading, for example one with only a background colour, panel:bgColor=#F4F5F7; a section holding a table or code block can stay as it is" }
             ]
           }
         },
