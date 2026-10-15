@@ -19,6 +19,11 @@ is additive; 1.0 code compiles and behaves as before.
   `sectionPresent`, `placeholder`, `assessmentScore`) and measures (`patternMatchCount`, `occurrenceCount`,
   `wordCount`, `alphanumericCount`, `length`, `itemCount`, `number`, `criteriaHeadingCount`) over `TextSource`s
   that can narrow to a headed section.
+- `sectionPanelCount` measure and `IssueText.PanelLayoutOf`: how the `h2.` sections of Jira wiki text sit in
+  `{panel}` blocks. A section with a table or code block cannot reasonably be panelled and is not counted.
+- `Presentation` (and `EpicPresentation`) factor in the built-in ticket-quality rubric, weight 8: each section should
+  sit in an untitled panel directly under its heading, because a panel title only repeats the heading. It applies to
+  Jira tickets with at least two sections that could be panelled and is left out of the score otherwise.
 - `AppliesWhen` and `NotApplicableExplanation` on assessments, `AppliesWhen` and `Weight` on categories; work that
   does not apply has the `NotApplicable` outcome and is left out of the score.
 - Named conditions, score caps, grade bands and classifications on the options, and `IAssessmentResult.Overall`

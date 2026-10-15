@@ -41,6 +41,7 @@ internal static class RuleValidator
 		AlphanumericCountMeasure value => SourceError(value.Source),
 		LengthMeasure value => SourceError(value.Source),
 		CriteriaHeadingCountMeasure value => SourceError(value.Source),
+		SectionPanelCountMeasure value => SourceError(value.Source),
 		ItemCountMeasure value => PathError(value.Path),
 		NumberMeasure value => PathError(value.Path),
 		_ => null,

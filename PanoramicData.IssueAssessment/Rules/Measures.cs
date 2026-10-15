@@ -16,6 +16,7 @@ namespace PanoramicData.IssueAssessment.Rules;
 [JsonDerivedType(typeof(ItemCountMeasure), "itemCount")]
 [JsonDerivedType(typeof(NumberMeasure), "number")]
 [JsonDerivedType(typeof(CriteriaHeadingCountMeasure), "criteriaHeadingCount")]
+[JsonDerivedType(typeof(SectionPanelCountMeasure), "sectionPanelCount")]
 public interface IMeasure
 {
 	/// <summary>
@@ -177,6 +178,60 @@ public sealed record CriteriaHeadingCountMeasure : IMeasure, IDescribedMeasure
 		ArgumentNullException.ThrowIfNull(context);
 		return string.Join("; ", IssueText.CriteriaHeadings(context.Text(Source)));
 	}
+}
+
+/// <summary>
+/// Which sections a <see cref="SectionPanelCountMeasure"/> counts.
+/// </summary>
+public enum SectionPanelKind
+{
+	/// <summary>Sections that are panelled, or could be.</summary>
+	Panelable,
+
+	/// <summary>Sections that are panelled.</summary>
+	Panelled,
+
+	/// <summary>Sections that could be panelled but are not.</summary>
+	Unpanelled,
+
+	/// <summary>Sections whose panel carries a title that repeats the heading above it.</summary>
+	Titled,
+}
+
+/// <summary>
+/// How many <c>h2.</c> sections of the text are laid out a given way in panels (see <see cref="IssueText.PanelLayoutOf"/>).
+/// Described as the headings counted, separated by semicolons.
+/// </summary>
+public sealed record SectionPanelCountMeasure : IMeasure, IDescribedMeasure
+{
+	/// <summary>Gets the text to read.</summary>
+	public required TextSource Source { get; init; }
+
+	/// <summary>Gets which sections to count.</summary>
+	public required SectionPanelKind Count { get; init; }
+
+	/// <inheritdoc />
+	public double Evaluate(EvaluationContext context)
+	{
+		ArgumentNullException.ThrowIfNull(context);
+		PanelLayout layout = IssueText.PanelLayoutOf(context.Text(Source));
+		return Count == SectionPanelKind.Panelled ? layout.Panelled : Headings(layout).Count;
+	}
+
+	/// <inheritdoc />
+	public string Describe(EvaluationContext context)
+	{
+		ArgumentNullException.ThrowIfNull(context);
+		return string.Join("; ", Headings(IssueText.PanelLayoutOf(context.Text(Source))));
+	}
+
+	private IReadOnlyList<string> Headings(PanelLayout layout) => Count switch
+	{
+		SectionPanelKind.Panelable => layout.Panelable,
+		SectionPanelKind.Unpanelled => layout.Unpanelled,
+		SectionPanelKind.Titled => layout.Titled,
+		_ => [.. layout.Panelable.Except(layout.Unpanelled)],
+	};
 }
 
 /// <summary>

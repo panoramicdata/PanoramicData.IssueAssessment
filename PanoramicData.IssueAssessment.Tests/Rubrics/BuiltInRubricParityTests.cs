@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using PanoramicData.IssueAssessment.Mapping;
 using PanoramicData.IssueAssessment.Rubrics;
 
@@ -16,7 +17,8 @@ namespace PanoramicData.IssueAssessment.Tests.Rubrics;
 /// </remarks>
 public class BuiltInRubricParityTests : TestBase
 {
-	private static readonly IssueAssessor Assessor = new(BuiltInRubrics.PanoramicDataTicketQuality);
+	// Yoda has no Presentation factor, so parity is proved over the rubric without it; PresentationTests covers that one.
+	private static readonly IssueAssessor Assessor = new(Serialization.AssessmentRubric.Load(WithoutPresentation(BuiltInRubrics.PanoramicDataTicketQualityJson)));
 
 	public static TheoryData<int> Cases => [.. Enumerable.Range(0, File.ReadAllLines(FixturePath).Length)];
 
@@ -59,6 +61,21 @@ public class BuiltInRubricParityTests : TestBase
 
 		loaded.Categories.Select(category => category.Name).Should().Equal("Ticket Quality", "Epic Quality");
 		loaded.GradeBands.Select(band => band.Name).Should().Equal("EXCELLENT", "GOOD", "ADEQUATE", "NEEDS IMPROVEMENT", "POOR");
+	}
+
+	private static string WithoutPresentation(string rubricJson)
+	{
+		JsonNode rubric = JsonNode.Parse(rubricJson, documentOptions: new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip })!;
+		foreach (JsonNode? category in rubric["categories"]!.AsArray())
+		{
+			JsonArray assessments = category!["assessments"]!.AsArray();
+			foreach (JsonNode? assessment in assessments.Where(item => item!["name"]!.GetValue<string>().EndsWith("Presentation", StringComparison.Ordinal)).ToList())
+			{
+				assessments.Remove(assessment);
+			}
+		}
+
+		return rubric.ToJsonString();
 	}
 
 	private static NormalizedIssue ToNormalized(JsonElement issue, string platform) => new()

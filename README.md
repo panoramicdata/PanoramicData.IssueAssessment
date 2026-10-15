@@ -180,7 +180,8 @@ The building blocks:
 - **Tiered assessments** (`"type": "tiered"`): tiers are tried in order and the first whose `when` holds gives the
   score (0–100 by default), the finding and an optional recommendation. The last tier has no condition.
 - **Measures** count things: `patternMatchCount`, `occurrenceCount`, `wordCount`, `alphanumericCount`, `length`,
-  `itemCount`, `number` and `criteriaHeadingCount`.
+  `itemCount`, `number`, `criteriaHeadingCount` and `sectionPanelCount` (how many `h2.` sections of Jira wiki text
+  are panelable, panelled, unpanelled or carry a panel title that repeats the heading).
 - **Conditions**: `all`, `any`, `not`, `ref` (a named condition), `measure`, `textMatches`, `fieldMatches`,
   `fieldEquals`, `fieldPresent`, `sectionPresent`, `placeholder` (a section that only says "TBD") and, for caps and
   classifications, `assessmentScore`.
