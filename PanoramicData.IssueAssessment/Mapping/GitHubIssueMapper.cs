@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using static PanoramicData.IssueAssessment.Mapping.JsonReading;
 
 namespace PanoramicData.IssueAssessment.Mapping;
 
@@ -29,30 +30,30 @@ public static partial class GitHubIssueMapper
 		}
 
 		ImmutableList<string> labels = Labels(issue);
-		string body = Text(issue, "body") ?? string.Empty;
+		string body = StringAt(issue, "body") ?? string.Empty;
 
 		return new NormalizedIssue
 		{
 			Key = Key(issue),
-			Title = Text(issue, "title"),
+			Title = StringAt(issue, "title"),
 			Description = body,
 			IssueType = IssueType(labels),
 			Priority = Priority(labels),
-			Status = Text(issue, "state"),
+			Status = StringAt(issue, "state"),
 			Assignee = FirstAssignee(issue),
 			Components = Components(labels),
 			Labels = labels,
 			AttachmentsCount = MarkdownImage().Count(body) + ImageUrl().Count(body),
 			SupportsFixVersion = false,
-			DueDate = issue.TryGetProperty("milestone", out JsonElement milestone) ? Text(milestone, "due_on") : null,
-			Url = Text(issue, "html_url"),
+			DueDate = issue.TryGetProperty("milestone", out JsonElement milestone) ? StringAt(milestone, "due_on") : null,
+			Url = StringAt(issue, "html_url"),
 			Platform = "GitHub",
 		};
 	}
 
 	private static ImmutableList<string> Labels(JsonElement issue)
 		=> issue.TryGetProperty("labels", out JsonElement labels) && labels.ValueKind == JsonValueKind.Array
-			? [.. labels.EnumerateArray().Select(label => label.ValueKind == JsonValueKind.String ? label.GetString() : Text(label, "name")).OfType<string>()]
+			? [.. labels.EnumerateArray().Select(label => label.ValueKind == JsonValueKind.String ? label.GetString() : StringAt(label, "name")).OfType<string>()]
 			: [];
 
 	private static string? Key(JsonElement issue)
@@ -60,7 +61,7 @@ public static partial class GitHubIssueMapper
 
 	private static string? FirstAssignee(JsonElement issue)
 		=> issue.TryGetProperty("assignees", out JsonElement assignees) && assignees.ValueKind == JsonValueKind.Array && assignees.GetArrayLength() > 0
-			? Text(assignees[0], "login")
+			? StringAt(assignees[0], "login")
 			: null;
 
 	private static string IssueType(ImmutableList<string> labels)
@@ -92,10 +93,6 @@ public static partial class GitHubIssueMapper
 			.Select(match => match.Groups[2].Value.Trim())
 			.Distinct(StringComparer.Ordinal)];
 
-	private static string? Text(JsonElement element, string property)
-		=> element.ValueKind == JsonValueKind.Object && element.TryGetProperty(property, out JsonElement value) && value.ValueKind == JsonValueKind.String
-			? value.GetString()
-			: null;
 
 	[GeneratedRegex("enhancement|feature|improvement|story", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, 1000)]
 	private static partial Regex FeatureLabel();
