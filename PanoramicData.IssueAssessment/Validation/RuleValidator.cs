@@ -16,7 +16,7 @@ internal sealed record RuleScope(
 /// Validates conditions, measures and text sources. Custom <see cref="ICondition"/> and <see cref="IMeasure"/>
 /// implementations are not inspected.
 /// </summary>
-internal static class RuleValidator
+internal static partial class RuleValidator
 {
 	public static string? ConditionError(ICondition? condition, RuleScope scope) => condition switch
 	{
@@ -31,68 +31,6 @@ internal static class RuleValidator
 		AssessmentScoreCondition score => AssessmentScoreError(score, scope),
 		_ => FieldConditionError(condition),
 	};
-
-	public static string? MeasureError(IMeasure? measure) => measure switch
-	{
-		null => "has a missing measure.",
-		PatternMatchCountMeasure value => SourceError(value.Source) ?? PatternsError(value.Patterns),
-		OccurrenceCountMeasure value => SourceError(value.Source) ?? PatternError(value.Pattern),
-		WordCountMeasure value => SourceError(value.Source),
-		AlphanumericCountMeasure value => SourceError(value.Source),
-		LengthMeasure value => SourceError(value.Source),
-		CriteriaHeadingCountMeasure value => SourceError(value.Source),
-		SectionPanelCountMeasure value => SourceError(value.Source),
-		ItemCountMeasure value => PathError(value.Path),
-		NumberMeasure value => PathError(value.Path),
-		_ => null,
-	};
-
-	/// <summary>
-	/// The first named condition that refers to itself, directly or through others.
-	/// </summary>
-	public static string? CycleError(IReadOnlyDictionary<string, ICondition> conditions)
-	{
-		foreach (string name in conditions.Keys)
-		{
-			if (ReachesItself(name, conditions))
-			{
-				return $"Condition '{name}' refers to itself.";
-			}
-		}
-
-		return null;
-	}
-
-	public static string? PathError(string? jsonPath)
-	{
-		try
-		{
-			JsonPathHelper.Validate(jsonPath!);
-			return null;
-		}
-		catch (InvalidJsonPathException)
-		{
-			return $"has invalid JSONPath '{jsonPath}'.";
-		}
-	}
-
-	public static string? PatternError(string? pattern)
-	{
-		if (string.IsNullOrWhiteSpace(pattern))
-		{
-			return "has an empty pattern.";
-		}
-
-		try
-		{
-			_ = RegexCache.GetOrAdd(pattern);
-			return null;
-		}
-		catch (ArgumentException)
-		{
-			return $"has invalid regex pattern '{pattern}'.";
-		}
-	}
 
 	private static string? FieldConditionError(ICondition condition) => condition switch
 	{
@@ -131,52 +69,4 @@ internal static class RuleValidator
 
 		return scope.AssessmentNames.Contains(condition.Assessment) ? null : $"refers to unknown assessment '{condition.Assessment}'.";
 	}
-
-	private static string? SourceError(TextSource? source)
-	{
-		if (source?.Paths is not { Count: > 0 })
-		{
-			return "has a text source without paths.";
-		}
-
-		return source.Paths.Select(PathError).FirstOrDefault(error => error is not null)
-			?? (source.Section is null ? null : PatternError(source.Section));
-	}
-
-	private static string? PatternsError(ImmutableList<string>? patterns)
-		=> patterns is not { Count: > 0 }
-			? "has no patterns."
-			: patterns.Select(PatternError).FirstOrDefault(error => error is not null);
-
-	private static bool ReachesItself(string start, IReadOnlyDictionary<string, ICondition> conditions)
-	{
-		Stack<string> pending = new(References(conditions[start]));
-		HashSet<string> seen = [];
-		while (pending.TryPop(out string? name))
-		{
-			if (name == start)
-			{
-				return true;
-			}
-
-			if (seen.Add(name) && conditions.TryGetValue(name, out ICondition? next))
-			{
-				foreach (string reference in References(next))
-				{
-					pending.Push(reference);
-				}
-			}
-		}
-
-		return false;
-	}
-
-	private static IEnumerable<string> References(ICondition? condition) => condition switch
-	{
-		ConditionReference reference => [reference.Name],
-		AllCondition all => all.Conditions.SelectMany(References),
-		AnyCondition any => any.Conditions.SelectMany(References),
-		NotCondition not => References(not.Condition),
-		_ => [],
-	};
 }
