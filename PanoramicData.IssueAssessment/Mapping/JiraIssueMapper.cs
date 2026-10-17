@@ -1,5 +1,6 @@
 using System.Collections.Frozen;
 using System.Text;
+using static PanoramicData.IssueAssessment.Mapping.JsonReading;
 
 namespace PanoramicData.IssueAssessment.Mapping;
 
@@ -45,22 +46,22 @@ public static class JiraIssueMapper
 	public static NormalizedIssue FromRestJson(JsonElement issue, Uri? baseUrl)
 	{
 		JsonElement fields = Fields(issue);
-		string? key = Text(issue, "key");
+		string? key = StringAt(issue, "key");
 		return new NormalizedIssue
 		{
 			Key = key,
-			Project = Text(fields, "project", "key"),
-			Title = Text(fields, "summary"),
+			Project = StringAt(fields, "project", "key"),
+			Title = StringAt(fields, "summary"),
 			Description = Description(fields),
-			IssueType = Text(fields, "issuetype", "name"),
-			Priority = Text(fields, "priority", "name"),
-			Status = Text(fields, "status", "name"),
-			Assignee = Text(fields, "assignee", "displayName"),
+			IssueType = StringAt(fields, "issuetype", "name"),
+			Priority = StringAt(fields, "priority", "name"),
+			Status = StringAt(fields, "status", "name"),
+			Assignee = StringAt(fields, "assignee", "displayName"),
 			Components = Names(fields, "components"),
 			Labels = Strings(fields, "labels"),
 			FixVersions = Names(fields, "fixVersions"),
 			AttachmentsCount = ArrayLength(fields, "attachment"),
-			DueDate = Text(fields, "duedate"),
+			DueDate = StringAt(fields, "duedate"),
 			Url = BrowseUrl(baseUrl, key),
 			Platform = "Jira",
 		};
@@ -106,7 +107,7 @@ public static class JiraIssueMapper
 
 	private static void AppendBlock(JsonElement node, StringBuilder text, string listPrefix)
 	{
-		string type = Text(node, "type") ?? string.Empty;
+		string type = StringAt(node, "type") ?? string.Empty;
 		if (ListMarkers.TryGetValue(type, out string? listMarker))
 		{
 			AppendList(node, text, listPrefix + listMarker);
@@ -150,7 +151,7 @@ public static class JiraIssueMapper
 		bool first = true;
 		foreach (JsonElement child in Children(item))
 		{
-			if (Text(child, "type") is "bulletList" or "orderedList")
+			if (StringAt(child, "type") is "bulletList" or "orderedList")
 			{
 				AppendBlock(child, text, marker);
 			}
@@ -162,12 +163,12 @@ public static class JiraIssueMapper
 		}
 	}
 
-	private static string Inline(JsonElement node) => Text(node, "type") switch
+	private static string Inline(JsonElement node) => StringAt(node, "type") switch
 	{
-		"text" => Text(node, "text") ?? string.Empty,
+		"text" => StringAt(node, "text") ?? string.Empty,
 		"hardBreak" => "\n",
-		"mention" or "emoji" => node.TryGetProperty("attrs", out JsonElement attrs) ? Text(attrs, "text") ?? string.Empty : string.Empty,
-		"inlineCard" => node.TryGetProperty("attrs", out JsonElement attrs) ? Text(attrs, "url") ?? string.Empty : string.Empty,
+		"mention" or "emoji" => node.TryGetProperty("attrs", out JsonElement attrs) ? StringAt(attrs, "text") ?? string.Empty : string.Empty,
+		"inlineCard" => node.TryGetProperty("attrs", out JsonElement attrs) ? StringAt(attrs, "url") ?? string.Empty : string.Empty,
 		_ => string.Concat(Children(node).Select(Inline)),
 	};
 
@@ -176,17 +177,10 @@ public static class JiraIssueMapper
 			? [.. content.EnumerateArray()]
 			: [];
 
-	private static string? Text(JsonElement element, string property)
-		=> element.ValueKind == JsonValueKind.Object && element.TryGetProperty(property, out JsonElement value) && value.ValueKind == JsonValueKind.String
-			? value.GetString()
-			: null;
-
-	private static string? Text(JsonElement element, string property, string nested)
-		=> element.ValueKind == JsonValueKind.Object && element.TryGetProperty(property, out JsonElement value) ? Text(value, nested) : null;
 
 	private static ImmutableList<string> Names(JsonElement fields, string property)
 		=> fields.TryGetProperty(property, out JsonElement values) && values.ValueKind == JsonValueKind.Array
-			? [.. values.EnumerateArray().Select(value => Text(value, "name")).OfType<string>()]
+			? [.. values.EnumerateArray().Select(value => StringAt(value, "name")).OfType<string>()]
 			: [];
 
 	private static ImmutableList<string> Strings(JsonElement fields, string property)

@@ -157,12 +157,7 @@ internal static class CategoryExecutor
 			.Zip(category.Assessments)
 			.Where(pair => pair.First.Outcome != AssessmentOutcome.NotApplicable)];
 
-		double? rawScore = null;
-		if (applicable.Count > 0 && applicable.TrueForAll(pair => pair.Result.Score.RawScore.HasValue))
-		{
-			rawScore = applicable.Sum(pair => pair.Result.Score.RawScore!.Value * pair.Assessment.Weight);
-		}
-
+		double? rawScore = WeightedRawScore(applicable);
 		double? normalizedScore = rawScore.HasValue
 			? ScoreCalculator.Normalize(rawScore.Value, minPossibleRaw, maxPossibleRaw)
 			: null;
@@ -176,4 +171,12 @@ internal static class CategoryExecutor
 		string reason = $"Executed {resultList.Count} assessment(s) in category '{category.Name}'.";
 		return new CategoryResult(category.Name, score, reason, resultList) { Weight = category.Weight };
 	}
+
+	/// <summary>
+	/// The weighted sum of the applicable assessments' raw scores; null when none applies or any of them has no score.
+	/// </summary>
+	private static double? WeightedRawScore(List<(AssessmentResult Result, Assessment Assessment)> applicable)
+		=> applicable.Count > 0 && applicable.TrueForAll(pair => pair.Result.Score.RawScore.HasValue)
+			? applicable.Sum(pair => pair.Result.Score.RawScore!.Value * pair.Assessment.Weight)
+			: null;
 }

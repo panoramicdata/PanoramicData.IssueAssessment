@@ -186,20 +186,26 @@ public static class IssueText
 
 		string? first = body.Find(line => line.Trim().Length > 0);
 		Match panel = first is null ? Match.Empty : PanelOpening.Match(first);
-		bool hasContent = first is not null && !IsPlaceholder(string.Join('\n', body));
-		bool isPlain = !body.Exists(line => PanelBlocker.IsMatch(line));
 		if (panel.Success)
 		{
 			panelable.Add(heading);
-			if (panel.Groups[1].Value.Contains("title=", StringComparison.OrdinalIgnoreCase))
-			{
-				titled.Add(heading);
-			}
+			AddIf(titled, heading, panel.Groups[1].Value.Contains("title=", StringComparison.OrdinalIgnoreCase));
+			return;
 		}
-		else if (hasContent && isPlain)
+
+		bool hasContent = first is not null && !IsPlaceholder(string.Join('\n', body));
+		if (hasContent && !body.Exists(line => PanelBlocker.IsMatch(line)))
 		{
 			panelable.Add(heading);
 			unpanelled.Add(heading);
+		}
+	}
+
+	private static void AddIf(List<string> list, string item, bool condition)
+	{
+		if (condition)
+		{
+			list.Add(item);
 		}
 	}
 
