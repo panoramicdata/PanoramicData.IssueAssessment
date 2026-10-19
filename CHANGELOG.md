@@ -5,7 +5,7 @@ All notable changes to this project are documented here. The format follows
 [Semantic Versioning](https://semver.org/). Versions are `major.minor.height`, where the height comes from
 Nerdbank.GitVersioning.
 
-## [1.2.0] - Unreleased
+## [1.2] - Unreleased
 
 Adds two Magic Suite ticket checks to the built-in rubric and a justified "not needed" option for documentation and
 certifications. Everything is additive; 1.1 rubrics load and score as before, though a ticket's score can move where
