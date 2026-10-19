@@ -73,10 +73,13 @@ public class TicketContractAssessmentTests : TestBase
 		report.Caps.Select(cap => cap.Name).Should().NotContain(CapName);
 	}
 
-	[Fact]
-	public async Task ReadyForTest_NoEvidence_Fails()
+	[Theory]
+	[InlineData("Ready for Test")]
+	[InlineData("Ready for Customer")]
+	[InlineData("With Customer")]
+	public async Task EvidenceDue_NoEvidence_Fails(string status)
 	{
-		AssessmentReport report = await AssessAsync(Summary + ClassifiedCriteria, status: "Ready for Test");
+		AssessmentReport report = await AssessAsync(Summary + ClassifiedCriteria, status: status);
 
 		ContractItem(report).Finding.Should().Be("✗ Ticket Contract: No Verification Evidence section");
 		report.Caps.Select(cap => cap.Name).Should().Contain(CapName);
@@ -94,6 +97,8 @@ public class TicketContractAssessmentTests : TestBase
 	[Theory]
 	[InlineData("Ready for Test")]
 	[InlineData("In Test")]
+	[InlineData("Ready for Customer")]
+	[InlineData("With Customer")]
 	[InlineData("Closed")]
 	public async Task ReadyForTest_FullEvidence_Passes(string status)
 	{

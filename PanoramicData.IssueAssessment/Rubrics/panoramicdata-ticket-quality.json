@@ -13,7 +13,7 @@
       "type": "all",
       "conditions": [ { "type": "fieldPresent", "path": "$.resolution" }, { "type": "not", "condition": { "type": "fieldEquals", "path": "$.resolution", "values": [ "Fixed", "Done" ] } } ]
     },
-    "contractEvidenceDue": { "type": "fieldEquals", "path": "$.status", "values": [ "Ready for Test", "In Test", "Test Blocked", "Ready for Release", "Closed", "Done", "Resolved" ] },
+    "contractEvidenceDue": { "type": "fieldEquals", "path": "$.status", "values": [ "Ready for Test", "In Test", "Test Blocked", "Ready for Customer", "With Customer", "Ready for Release", "Closed", "Done", "Resolved" ] },
     "isInvestigation": {
       "type": "all",
       "conditions": [
