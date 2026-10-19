@@ -17,6 +17,7 @@ namespace PanoramicData.IssueAssessment.Rules;
 [JsonDerivedType(typeof(NumberMeasure), "number")]
 [JsonDerivedType(typeof(CriteriaHeadingCountMeasure), "criteriaHeadingCount")]
 [JsonDerivedType(typeof(SectionPanelCountMeasure), "sectionPanelCount")]
+[JsonDerivedType(typeof(CriteriaClassificationMeasure), "criteriaClassification")]
 public interface IMeasure
 {
 	/// <summary>

@@ -13,6 +13,7 @@
       "type": "all",
       "conditions": [ { "type": "fieldPresent", "path": "$.resolution" }, { "type": "not", "condition": { "type": "fieldEquals", "path": "$.resolution", "values": [ "Fixed", "Done" ] } } ]
     },
+    "contractEvidenceDue": { "type": "fieldEquals", "path": "$.status", "values": [ "Ready for Test", "In Test", "Test Blocked", "Ready for Release", "Closed", "Done", "Resolved" ] },
     "isInvestigation": {
       "type": "all",
       "conditions": [
@@ -392,6 +393,52 @@
           }
         },
         {
+          "name": "TicketContract",
+          "description": "MS acceptance criteria are classified MUST, SHOULD or MAY, with at least one MUST, and from Ready for Test on a Verification Evidence section says how each MUST was verified.",
+          "weight": 6,
+          "appliesWhen": { "type": "all", "conditions": [ { "type": "ref", "name": "isMs" }, { "type": "not", "condition": { "type": "ref", "name": "isEpic" } }, { "type": "not", "condition": { "type": "ref", "name": "isUndelivered" } } ] },
+          "definition": {
+            "type": "tiered",
+            "measures": {
+              "items": { "type": "criteriaClassification", "path": "$.description", "section": "acceptance\\s+criteria", "count": "items" },
+              "unclassified": { "type": "criteriaClassification", "path": "$.description", "section": "acceptance\\s+criteria", "count": "unclassified" },
+              "must": { "type": "criteriaClassification", "path": "$.description", "section": "acceptance\\s+criteria", "count": "must" }
+            },
+            "tiers": [
+              { "when": { "type": "not", "condition": { "type": "sectionPresent", "source": { "paths": [ "$.description" ], "section": "acceptance\\s+criteria" } } }, "score": 0, "finding": "✗ Ticket Contract: No acceptance criteria section", "recommendation": "Add an 'h2. Acceptance Criteria' section listing each criterion as a numbered item classified MUST, SHOULD or MAY" },
+              { "when": { "type": "measure", "measure": "items", "lessThan": 1 }, "score": 0, "finding": "✗ Ticket Contract: Acceptance criteria section has no criteria", "recommendation": "List each acceptance criterion as a numbered item or table row, classified MUST, SHOULD or MAY" },
+              { "when": { "type": "measure", "measure": "unclassified", "atLeast": 1 }, "score": 0, "finding": "✗ Ticket Contract: {unclassified} criteria not classified MUST/SHOULD/MAY", "recommendation": "Start each acceptance criterion with MUST, SHOULD or MAY" },
+              { "when": { "type": "measure", "measure": "must", "lessThan": 1 }, "score": 0, "finding": "✗ Ticket Contract: No MUST criterion", "recommendation": "Classify the criteria the ticket cannot pass without as MUST (aim for 2 to 5)" },
+              { "when": { "type": "all", "conditions": [ { "type": "ref", "name": "contractEvidenceDue" }, { "type": "not", "condition": { "type": "sectionPresent", "source": { "paths": [ "$.description" ], "section": "verification\\s+evidence" } } } ] }, "score": 0, "finding": "✗ Ticket Contract: No Verification Evidence section", "recommendation": "Add an 'h2. Verification Evidence' section: a Criterion/Test/Location table, Reachability, what is not covered and why, and the suggested QA route" },
+              {
+                "when": {
+                  "type": "all",
+                  "conditions": [
+                    { "type": "ref", "name": "contractEvidenceDue" },
+                    {
+                      "type": "not",
+                      "condition": {
+                        "type": "all",
+                        "conditions": [
+                          { "type": "textMatches", "source": { "paths": [ "$.description" ], "section": "verification\\s+evidence" }, "patterns": [ "\\|\\|\\s*Criterion\\s*\\|\\|" ] },
+                          { "type": "textMatches", "source": { "paths": [ "$.description" ], "section": "verification\\s+evidence" }, "patterns": [ "(?i)reachability" ] },
+                          { "type": "textMatches", "source": { "paths": [ "$.description" ], "section": "verification\\s+evidence" }, "patterns": [ "(?i)not covered" ] },
+                          { "type": "textMatches", "source": { "paths": [ "$.description" ], "section": "verification\\s+evidence" }, "caseSensitive": true, "patterns": [ "(?i)suggested qa route:?\\*?\\s*(?-i:[ABCD])\\b" ] }
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "score": 0,
+                "finding": "✗ Ticket Contract: Verification Evidence incomplete",
+                "recommendation": "Complete the Verification Evidence section: a Criterion/Test/Location table, Reachability, what is not covered and why, and 'Suggested QA route:' followed by A, B, C or D"
+              },
+              { "when": { "type": "ref", "name": "contractEvidenceDue" }, "score": 100, "finding": "✓ Ticket Contract: Criteria classified; evidence present" },
+              { "score": 100, "finding": "✓ Ticket Contract: Criteria classified" }
+            ]
+          }
+        },
+        {
           "name": "CriteriaDuplication",
           "description": "Acceptance criteria are stated under one heading only. It carries no weight; duplication caps the score instead.",
           "weight": 0,
@@ -617,6 +664,12 @@
         "type": "any",
         "conditions": [ { "type": "assessmentScore", "assessment": "ReleaseNotes", "lessThan": 100 }, { "type": "assessmentScore", "assessment": "EpicReleaseNotes", "lessThan": 100 } ]
       }
+    },
+    {
+      "name": "Ticket contract",
+      "group": "mandatory",
+      "cap": 0.79,
+      "when": { "type": "assessmentScore", "assessment": "TicketContract", "lessThan": 100 }
     },
     {
       "name": "Rollback plan",
