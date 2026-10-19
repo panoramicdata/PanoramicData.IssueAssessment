@@ -136,6 +136,12 @@ report.Recommendations.ForEach(Console.WriteLine);  // what to add to raise the 
 Console.WriteLine(report.ToJson());
 ```
 
+For Magic Suite (`MS`) tickets the rubric also scores release notes (`ReleaseNotes`, and `EpicReleaseNotes` on epics)
+and, for tickets that are not epics, the MUST/SHOULD/MAY classification of acceptance criteria and the Verification
+Evidence section (`TicketContract`). Both have weight 6 and a mandatory cap of 0.79, and neither applies to a ticket
+whose resolution is anything other than Fixed or Done. Documentation and Certifications accept a justified
+`No documentation change: <reason>` or `No certification question: <reason>` line in place of the item.
+
 `BuiltInRubrics.PanoramicDataTicketQualityJson` returns its JSON, a good starting point for your own.
 
 ### Writing a rubric
