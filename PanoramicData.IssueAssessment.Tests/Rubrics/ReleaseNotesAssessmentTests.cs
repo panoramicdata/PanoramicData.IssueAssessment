@@ -59,6 +59,14 @@ public class ReleaseNotesAssessmentTests : TestBase
 	public async Task TicketKey_Fails(string notes)
 		=> NotesItem(await AssessAsync(notes)).Finding.Should().StartWith("✗ Release Notes: Not customer-facing");
 
+	[Theory]
+	[InlineData("Schedules now read and write UTF-8 files correctly for every tenant")]
+	[InlineData("Passwords are now hashed with SHA-256 before they are stored for tenants")]
+	[InlineData("Reports now meet the ISO-27001 audit trail wording for every customer")]
+	[InlineData("The library update addresses CVE-2026-12345 for every hosted customer")]
+	public async Task StandardsIdentifiers_Pass(string notes)
+		=> NotesItem(await AssessAsync(notes)).RawScore.Should().Be(100);
+
 	[Fact]
 	public async Task FilePath_Fails()
 		=> NotesItem(await AssessAsync("The settings now load from appsettings.json when the service starts up")).Finding.Should().StartWith("✗ Release Notes: Not customer-facing");
@@ -89,13 +97,13 @@ public class ReleaseNotesAssessmentTests : TestBase
 		=> NotesItem(await AssessAsync("Schedules now show the correct behavior when the timezone changes for tenants")).Finding.Should().Be("✗ Release Notes: US spelling");
 
 	[Theory]
-	[InlineData("Fixed bug")]
+	[InlineData("Fixed bug.")]
 	[InlineData("Various fixes")]
 	public async Task GenericFixedBug_Fails(string notes)
 	{
 		AssessmentReport report = await AssessAsync(notes);
 
-		NotesItem(report).RawScore.Should().Be(0);
+		NotesItem(report).Finding.Should().Be("✗ Release Notes: Generic");
 	}
 
 	[Fact]
@@ -136,6 +144,7 @@ public class ReleaseNotesAssessmentTests : TestBase
 		AssessmentReport before = await ReportAsync(previous, ops);
 
 		now.Score.Should().Be(before.Score);
+		now.Findings.Should().NotContain(finding => finding.Contains("Release Notes", StringComparison.Ordinal));
 		now.Caps.Select(cap => cap.Name).Should().NotContain(CapName);
 		now.Categories.SelectMany(category => category.Assessments).Single(item => item.Name == "ReleaseNotes").Outcome.Should().Be(AssessmentOutcome.NotApplicable);
 	}
