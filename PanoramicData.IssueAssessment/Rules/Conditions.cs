@@ -18,6 +18,7 @@ namespace PanoramicData.IssueAssessment.Rules;
 [JsonDerivedType(typeof(FieldMatchesCondition), "fieldMatches")]
 [JsonDerivedType(typeof(FieldEqualsCondition), "fieldEquals")]
 [JsonDerivedType(typeof(FieldPresentCondition), "fieldPresent")]
+[JsonDerivedType(typeof(FieldsDifferCondition), "fieldsDiffer")]
 [JsonDerivedType(typeof(SectionPresentCondition), "sectionPresent")]
 [JsonDerivedType(typeof(PlaceholderCondition), "placeholder")]
 [JsonDerivedType(typeof(AssessmentScoreCondition), "assessmentScore")]

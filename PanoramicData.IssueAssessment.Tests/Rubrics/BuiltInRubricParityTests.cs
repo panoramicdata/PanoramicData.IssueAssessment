@@ -17,7 +17,7 @@ namespace PanoramicData.IssueAssessment.Tests.Rubrics;
 /// </remarks>
 public class BuiltInRubricParityTests : TestBase
 {
-	// Yoda has no Presentation factor, so parity is proved over the rubric without it; PresentationTests covers that one.
+	// Yoda has no Presentation or Release Notes factor, so parity is proved over the rubric without them; PresentationTests and ReleaseNotesAssessmentTests cover those.
 	private static readonly IssueAssessor Assessor = new(Serialization.AssessmentRubric.Load(WithoutPresentation(BuiltInRubrics.PanoramicDataTicketQualityJson)));
 
 	public static TheoryData<int> Cases => [.. Enumerable.Range(0, File.ReadAllLines(FixturePath).Length)];
@@ -69,10 +69,16 @@ public class BuiltInRubricParityTests : TestBase
 		foreach (JsonNode? category in rubric["categories"]!.AsArray())
 		{
 			JsonArray assessments = category!["assessments"]!.AsArray();
-			foreach (JsonNode? assessment in assessments.Where(item => item!["name"]!.GetValue<string>().EndsWith("Presentation", StringComparison.Ordinal)).ToList())
+			foreach (JsonNode? assessment in assessments.Where(item => item!["name"]!.GetValue<string>().EndsWith("Presentation", StringComparison.Ordinal) || item["name"]!.GetValue<string>().EndsWith("ReleaseNotes", StringComparison.Ordinal)).ToList())
 			{
 				assessments.Remove(assessment);
 			}
+		}
+
+		JsonArray caps = rubric["scoreCaps"]!.AsArray();
+		foreach (JsonNode? cap in caps.Where(item => item!["name"]!.GetValue<string>() == "Release notes").ToList())
+		{
+			caps.Remove(cap);
 		}
 
 		return rubric.ToJsonString();

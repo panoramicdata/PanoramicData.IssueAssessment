@@ -1,0 +1,191 @@
+using PanoramicData.IssueAssessment.Mapping;
+using PanoramicData.IssueAssessment.Rubrics;
+
+namespace PanoramicData.IssueAssessment.Tests.Rubrics;
+
+/// <summary>
+/// The MS-only ReleaseNotes assessment: customer-facing release notes are mandatory, so a failing tier caps the score.
+/// </summary>
+public class ReleaseNotesAssessmentTests : TestBase
+{
+	private const string CapName = "Release notes";
+	private const string GoodNotes = "Reports now keep their scheduled run time after the tenant timezone changes";
+	private static readonly IssueAssessor Assessor = new(BuiltInRubrics.PanoramicDataTicketQuality);
+
+	private const string Description = "h2. Summary\r\nRun times drift when the tenant timezone changes.\r\n\r\nh2. Acceptance Criteria\r\n# MUST: a schedule keeps its local run time after a timezone change.\r\n# SHOULD: the schedule list shows the new offset.\r\n\r\nh2. Business Case\r\nCustomers rely on reports arriving at the agreed time, which has a direct business value.";
+
+	[Fact]
+	public async Task Empty_FailsAndCapsAt79()
+	{
+		AssessmentReport report = await AssessAsync(notes: null);
+
+		NotesItem(report).RawScore.Should().Be(0);
+		NotesItem(report).Finding.Should().Be("✗ Release Notes: Empty");
+		report.Caps.Select(cap => cap.Name).Should().Contain(CapName);
+		report.NormalizedScore.Should().BeLessThanOrEqualTo(0.79);
+	}
+
+	[Theory]
+	[InlineData("TBD")]
+	[InlineData("None")]
+	[InlineData("See the ticket")]
+	[InlineData("---")]
+	public async Task Placeholder_Fails(string notes)
+		=> NotesItem(await AssessAsync(notes)).Finding.Should().Be("✗ Release Notes: Placeholder");
+
+	[Fact]
+	public async Task Placeholder_TBD_Fails()
+	{
+		AssessmentReport report = await AssessAsync("TBD");
+
+		NotesItem(report).Finding.Should().Be("✗ Release Notes: Placeholder");
+		report.Caps.Select(cap => cap.Name).Should().Contain(CapName);
+	}
+
+	[Fact]
+	public async Task SevenWords_Fails()
+		=> NotesItem(await AssessAsync("Schedules now keep their run time changes")).Finding.Should().Be("✗ Release Notes: Under 8 words");
+
+	[Fact]
+	public async Task SameAsSummaryIgnoringPrefix_Fails()
+		=> NotesItem(await AssessAsync("Add X to Y report for every tenant", title: "ReportMagic: Add X to Y report for every tenant"))
+			.Finding.Should().Be("✗ Release Notes: Same as the summary");
+
+	[Theory]
+	[InlineData("Fixes the issue raised in MS-12345 for all users today")]
+	[InlineData("Updated ReportJob.cs so that every scheduled report runs on time")]
+	[InlineData("Changed the file under C:\\inetpub\\reports so that every report loads")]
+	[InlineData("Updated the files in the repo/src/Reports folder so reports load faster")]
+	public async Task TicketKey_Fails(string notes)
+		=> NotesItem(await AssessAsync(notes)).Finding.Should().StartWith("✗ Release Notes: Not customer-facing");
+
+	[Fact]
+	public async Task FilePath_Fails()
+		=> NotesItem(await AssessAsync("The settings now load from appsettings.json when the service starts up")).Finding.Should().StartWith("✗ Release Notes: Not customer-facing");
+
+	[Fact]
+	public async Task ServiceIdentifier_Fails()
+		=> NotesItem(await AssessAsync("ReportJobService now retries failed jobs three times before giving up")).Finding.Should().StartWith("✗ Release Notes: Not customer-facing");
+
+	[Fact]
+	public async Task ProductNames_Pass()
+	{
+		AssessmentReport report = await AssessAsync("ReportMagic and ConnectMagic now show the DataMagic sync time on every dashboard page");
+
+		NotesItem(report).RawScore.Should().Be(100);
+		report.Caps.Select(cap => cap.Name).Should().NotContain(CapName);
+	}
+
+	[Fact]
+	public async Task SentenceInitialCapital_Passes()
+		=> NotesItem(await AssessAsync("Schedules now keep their local run time after the timezone changes")).RawScore.Should().Be(100);
+
+	[Fact]
+	public async Task EmDash_Fails()
+		=> NotesItem(await AssessAsync("Schedules now keep their run time \u2014 even when the timezone changes")).Finding.Should().Be("✗ Release Notes: Contains an em dash");
+
+	[Fact]
+	public async Task UsSpelling_Fails()
+		=> NotesItem(await AssessAsync("Schedules now show the correct behavior when the timezone changes for tenants")).Finding.Should().Be("✗ Release Notes: US spelling");
+
+	[Theory]
+	[InlineData("Fixed bug")]
+	[InlineData("Various fixes")]
+	public async Task GenericFixedBug_Fails(string notes)
+	{
+		AssessmentReport report = await AssessAsync(notes);
+
+		NotesItem(report).RawScore.Should().Be(0);
+	}
+
+	[Fact]
+	public async Task Good_Scores100_NoCap()
+	{
+		AssessmentReport report = await AssessAsync(GoodNotes);
+
+		NotesItem(report).Finding.Should().Be("✓ Release Notes: Present and customer-facing");
+		report.Caps.Select(cap => cap.Name).Should().NotContain(CapName);
+	}
+
+	[Fact]
+	public async Task InternalLabel_StillRequiresNotes()
+	{
+		AssessmentReport report = await AssessAsync(notes: null, labels: ["internal"]);
+
+		NotesItem(report).RawScore.Should().Be(0);
+		report.Caps.Select(cap => cap.Name).Should().Contain(CapName);
+	}
+
+	[Fact]
+	public async Task Epic_IsAssessed()
+	{
+		AssessmentReport report = await AssessAsync(notes: null, issueType: "Epic");
+
+		report.Categories.Single(category => category.Name == "Epic Quality").Assessments
+			.Single(item => item.Name.EndsWith("ReleaseNotes", StringComparison.Ordinal)).RawScore.Should().Be(0);
+		report.Caps.Select(cap => cap.Name).Should().Contain(CapName);
+	}
+
+	[Fact]
+	public async Task OpsProject_NotApplicable_ScoreUnchanged()
+	{
+		NormalizedIssue ops = Issue(notes: null) with { Key = "OPS-1", Project = "OPS", Description = Description };
+		IssueAssessor previous = new(Serialization.AssessmentRubric.Load(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Rubrics", "ticket-quality-1.1.6.json"))));
+
+		AssessmentReport now = await ReportAsync(Assessor, ops);
+		AssessmentReport before = await ReportAsync(previous, ops);
+
+		now.Score.Should().Be(before.Score);
+		now.Caps.Select(cap => cap.Name).Should().NotContain(CapName);
+		now.Categories.SelectMany(category => category.Assessments).Single(item => item.Name == "ReleaseNotes").Outcome.Should().Be(AssessmentOutcome.NotApplicable);
+	}
+
+	[Theory]
+	[InlineData("Won't Do")]
+	[InlineData("Duplicate")]
+	public async Task ResolutionWontDo_NotApplicable_NoCap(string resolution)
+	{
+		AssessmentReport report = await AssessAsync(notes: null, resolution: resolution);
+
+		report.Caps.Select(cap => cap.Name).Should().NotContain(CapName);
+		report.Categories.SelectMany(category => category.Assessments).Single(item => item.Name == "ReleaseNotes").Outcome.Should().Be(AssessmentOutcome.NotApplicable);
+	}
+
+	[Theory]
+	[InlineData("Fixed")]
+	[InlineData("Done")]
+	public async Task ResolutionFixed_IsAssessed(string resolution)
+	{
+		AssessmentReport report = await AssessAsync(notes: null, resolution: resolution);
+
+		NotesItem(report).RawScore.Should().Be(0);
+		report.Caps.Select(cap => cap.Name).Should().Contain(CapName);
+	}
+
+	private static AssessmentReportItem NotesItem(AssessmentReport report)
+		=> report.Categories.SelectMany(category => category.Assessments).Single(item => item.Name.EndsWith("ReleaseNotes", StringComparison.Ordinal) && item.Outcome != AssessmentOutcome.NotApplicable);
+
+	private static NormalizedIssue Issue(string? notes, string title = "Keep schedule run times across timezone changes", string issueType = "Improvement", string? resolution = null, ImmutableList<string>? labels = null)
+		=> new()
+		{
+			Key = "MS-1",
+			Project = "MS",
+			Title = title,
+			Description = Description,
+			IssueType = issueType,
+			Status = "In Progress",
+			Platform = "Jira",
+			ReleaseNotes = notes,
+			Resolution = resolution,
+			Labels = labels ?? [],
+		};
+
+	private static async Task<AssessmentReport> ReportAsync(IssueAssessor assessor, NormalizedIssue issue)
+	{
+		using JsonDocument document = issue.ToJsonDocument();
+		return AssessmentReport.From(await assessor.AssessAsync(document, CancellationToken));
+	}
+
+	private static Task<AssessmentReport> AssessAsync(string? notes, string title = "Keep schedule run times across timezone changes", string issueType = "Improvement", string? resolution = null, ImmutableList<string>? labels = null)
+		=> ReportAsync(Assessor, Issue(notes, title, issueType, resolution, labels));
+}

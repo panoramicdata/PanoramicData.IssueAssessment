@@ -15,6 +15,7 @@
 	<ItemGroup>
 		<Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
 		<Content Include="Rubrics\yoda-fixtures.jsonl" CopyToOutputDirectory="PreserveNewest" />
+		<Content Include="Rubrics\ticket-quality-1.1.6.json" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 
 	<ItemGroup>
