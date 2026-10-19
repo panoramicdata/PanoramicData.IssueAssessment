@@ -118,6 +118,7 @@ public class TicketContractAssessmentTests : TestBase
 	[InlineData("* (SHOULD) x")]
 	[InlineData("| MAY 1 | x |")]
 	[InlineData("1. MUST - x")]
+	[InlineData("# *MUST* - PASS when a reference is struck through on its page")]
 	public async Task FormsAccepted(string criterion)
 	{
 		string criteria = $"h2. Acceptance Criteria\r\n# MUST: a schedule keeps its run time.\r\n{criterion}\r\n";
@@ -131,6 +132,17 @@ public class TicketContractAssessmentTests : TestBase
 	public async Task LowercaseMay_IsNotAClassification()
 		=> ContractItem(await AssessAsync(Summary + "h2. Acceptance Criteria\r\n# MUST: a schedule keeps its run time.\r\n# may show the offset.\r\n"))
 			.Finding.Should().Be("✗ Ticket Contract: 1 criteria not classified MUST/SHOULD/MAY");
+
+	[Fact]
+	public async Task BoldGroupLabelLine_IsNotACriterion()
+	{
+		const string criteria = "h2. Acceptance Criteria\r\n*MUST* (the ticket cannot pass without these)\r\n# *MUST* A value encrypted under the old key is readable\r\n# *SHOULD* Something else\r\n";
+
+		AssessmentReport report = await AssessAsync(Summary + criteria);
+
+		ContractItem(report).RawScore.Should().Be(100, ContractItem(report).Finding);
+		ContractItem(report).Finding.Should().Be("✓ Ticket Contract: Criteria classified");
+	}
 
 	[Fact]
 	public async Task NestedSubPointsAndTableRules_AreNotCriteria()
