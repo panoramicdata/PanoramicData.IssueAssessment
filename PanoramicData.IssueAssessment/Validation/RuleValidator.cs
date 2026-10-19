@@ -38,6 +38,7 @@ internal static partial class RuleValidator
 		FieldMatchesCondition value => PathError(value.Path) ?? PatternsError(value.Patterns),
 		FieldEqualsCondition value => PathError(value.Path) ?? (value.Values is not { Count: > 0 } ? "has a 'fieldEquals' condition without values." : null),
 		FieldPresentCondition value => PathError(value.Path),
+		FieldsDifferCondition value => PathError(value.Left) ?? PathError(value.Right) ?? (value.IgnorePrefixPattern is null ? null : PatternError(value.IgnorePrefixPattern)),
 		SectionPresentCondition value => SourceError(value.Source) ?? (value.Source.Section is null ? "has a 'sectionPresent' condition whose source has no section." : null),
 		PlaceholderCondition value => SourceError(value.Source),
 		_ => null,

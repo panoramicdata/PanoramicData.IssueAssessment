@@ -5,6 +5,33 @@ All notable changes to this project are documented here. The format follows
 [Semantic Versioning](https://semver.org/). Versions are `major.minor.height`, where the height comes from
 Nerdbank.GitVersioning.
 
+## [1.2] - Unreleased
+
+Adds two Magic Suite ticket checks to the built-in rubric and a justified "not needed" option for documentation and
+certifications. Everything is additive; 1.1 rubrics load and score as before, though a ticket's score can move where
+the new checks apply.
+
+### Added
+
+- `NormalizedIssue.ReleaseNotes` (Jira `customfield_10600`, plain text or ADF) and `NormalizedIssue.Resolution`
+  (`fields.resolution.name`), read from the `releaseNotes` and `resolution` JSON keys.
+- Built-in ticket-quality rubric: MS-only `ReleaseNotes` assessment (and `EpicReleaseNotes` in Epic Quality), weight 6,
+  mandatory cap 0.79. It checks that the notes are present, not a placeholder or generic, at least 8 words, different
+  from the summary, customer-facing (no ticket keys other than standards ids, file paths or code identifiers), free of
+  em dashes and in British spelling. It does not apply to other projects or to undelivered resolutions.
+- Built-in ticket-quality rubric: MS-only `TicketContract` assessment (not for Epics), weight 6, mandatory cap 0.79.
+  Acceptance criteria must each be classified MUST, SHOULD or MAY, with at least one MUST. A criterion is classified
+  when it starts with a keyword, contains exactly one distinct keyword (the RFC 2119 sentence form), or sits under a
+  label line such as `*MUST*` or `MUST:`. Only capitals count. From Ready for Test onwards
+  the ticket needs an `h2. Verification Evidence` section (optionally marked "(Retrospective)") with a criterion table,
+  a Reachability block, a Not covered block and a Suggested QA route of A to D.
+- New condition type `fieldsDiffer` and new measure `criteriaClassification`, for rubrics that need them.
+
+### Changed
+
+- Documentation and Certifications accept a justified `No documentation change: <reason>` or
+  `No certification question: <reason>` line, for all projects.
+
 ## [1.1] - Unreleased
 
 Adds rubrics: whole configurations written as JSON, with a built-in Panoramic Data ticket-quality rubric. Everything

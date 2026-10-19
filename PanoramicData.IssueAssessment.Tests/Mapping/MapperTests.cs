@@ -149,6 +149,43 @@ public class MapperTests
 	}
 
 	[Fact]
+	public void FromRestJson_ReadsReleaseNotesFromCustomField10600()
+	{
+		JiraIssueMapper.FromRestJson(Json("""{ "fields": { "customfield_10600": "Fixed the export." } }"""))
+			.ReleaseNotes.Should().Be("Fixed the export.");
+
+		JiraIssueMapper.FromRestJson(Json("""
+			{ "fields": { "customfield_10600": { "type": "doc", "version": 1, "content": [
+				{ "type": "paragraph", "content": [ { "type": "text", "text": "Fixed the export." } ] } ] } } }
+			""")).ReleaseNotes.Should().Be("Fixed the export.");
+
+		JiraIssueMapper.FromRestJson(Json("""{ "fields": {} }""")).ReleaseNotes.Should().BeNull();
+	}
+
+	[Theory]
+	[InlineData("Won't Do")]
+	[InlineData("Fixed")]
+	public void FromRestJson_ReadsResolutionName(string resolution)
+		=> JiraIssueMapper.FromRestJson(Json(JsonSerializer.Serialize(new { fields = new { resolution = new { name = resolution } } })))
+			.Resolution.Should().Be(resolution);
+
+	[Fact]
+	public void FromRestJson_NullResolution_IsNull()
+		=> JiraIssueMapper.FromRestJson(Json("""{ "fields": { "resolution": null } }""")).Resolution.Should().BeNull();
+
+	[Fact]
+	public void ToJsonObject_OmitsNullReleaseNotesAndResolution()
+	{
+		var empty = new NormalizedIssue().ToJsonObject();
+		empty.ContainsKey("releaseNotes").Should().BeFalse();
+		empty.ContainsKey("resolution").Should().BeFalse();
+
+		var set = new NormalizedIssue { ReleaseNotes = "n", Resolution = "Fixed" }.ToJsonObject();
+		set["releaseNotes"]!.GetValue<string>().Should().Be("n");
+		set["resolution"]!.GetValue<string>().Should().Be("Fixed");
+	}
+
+	[Fact]
 	public void Jira_NoDescription_IsNull()
 	{
 		JiraIssueMapper.FromRestJson(Json("""{ "fields": {} }""")).Description.Should().BeNull();

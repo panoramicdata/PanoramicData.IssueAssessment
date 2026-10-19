@@ -68,6 +68,12 @@ public sealed partial record NormalizedIssue
 	/// <summary>Gets reproduction steps held in a field of their own, if the system has one.</summary>
 	public string? ReproductionSteps { get; init; }
 
+	/// <summary>Gets the release notes held in a field of their own, if the system has one.</summary>
+	public string? ReleaseNotes { get; init; }
+
+	/// <summary>Gets the resolution name, such as Fixed or Won't Do; null while unresolved.</summary>
+	public string? Resolution { get; init; }
+
 	/// <summary>Gets a link to the issue.</summary>
 	public string? Url { get; init; }
 
@@ -118,6 +124,8 @@ public sealed partial record NormalizedIssue
 		Add(issue, "dueDate", DueDate);
 		Add(issue, "acceptanceCriteria", AcceptanceCriteria);
 		Add(issue, "reproductionSteps", ReproductionSteps);
+		Add(issue, "releaseNotes", ReleaseNotes);
+		Add(issue, "resolution", Resolution);
 		Add(issue, "url", Url);
 		Add(issue, "platform", Platform);
 		return issue;

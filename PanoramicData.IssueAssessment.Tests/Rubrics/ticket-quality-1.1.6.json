@@ -1,0 +1,609 @@
+{
+  // Panoramic Data ticket quality rubric.
+  // Ported from PanoramicData.Skills .github/skills/_common/IssueQualityCore.ps1 (Yoda), which defined it first:
+  // factors, weights, patterns, findings and recommendations are transcribed from there, so both score a ticket the
+  // same. Epics use their own rubric; Change Requests add a rollback plan; Bugs need steps to reproduce.
+  "executionStrategy": "series",
+  "conditions": {
+    "isBug": { "type": "fieldMatches", "path": "$.issueType", "patterns": [ "Bug|Defect" ] },
+    "isEpic": { "type": "fieldEquals", "path": "$.issueType", "values": [ "Epic" ] },
+    "isChangeRequest": { "type": "fieldEquals", "path": "$.issueType", "values": [ "Change Request" ] },
+    "isInvestigation": {
+      "type": "all",
+      "conditions": [
+        { "type": "not", "condition": { "type": "ref", "name": "isEpic" } },
+        {
+          "type": "any",
+          "conditions": [
+            {
+              "type": "all",
+              "conditions": [
+                { "type": "not", "condition": { "type": "ref", "name": "isBug" } },
+                {
+                  "type": "textMatches",
+                  "source": { "paths": [ "$.title", "$.description" ] },
+                  "patterns": [ "\\binvestigate\\b", "\\bresearch\\b", "\\bspike\\b", "\\banalysis\\b", "\\bexplore\\b", "\\bfeasibility\\b", "\\bproof\\s+of\\s+concept\\b", "\\bpoc\\b", "\\bstudy\\b", "\\bevaluate\\b", "\\bassess\\b" ]
+                }
+              ]
+            },
+            { "type": "fieldEquals", "path": "$.labels", "values": [ "investigation", "research", "spike" ] }
+          ]
+        }
+      ]
+    },
+    "supportsComponents": {
+      "type": "any",
+      "conditions": [
+        { "type": "fieldEquals", "path": "$.supportsComponents", "values": [ "true" ] },
+        {
+          "type": "all",
+          "conditions": [
+            { "type": "not", "condition": { "type": "fieldPresent", "path": "$.supportsComponents" } },
+            { "type": "not", "condition": { "type": "fieldEquals", "path": "$.project", "values": [ "PS" ] } }
+          ]
+        }
+      ]
+    },
+    "supportsFixVersion": { "type": "not", "condition": { "type": "fieldEquals", "path": "$.supportsFixVersion", "values": [ "false" ] } },
+    "shouldHaveFixVersion": { "type": "fieldEquals", "path": "$.status", "values": [ "Ready for Test", "In Test", "Ready for Release", "Closed", "Done", "Resolved" ] },
+    "hasFixVersion": { "type": "fieldPresent", "path": "$.fixVersions" },
+    "hasEnvironmentMention": { "type": "textMatches", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "test2|alpha|beta|staging|production|environment" ] },
+    "nonUiComponentsOnly": {
+      "type": "fieldMatches",
+      "path": "$.components",
+      "requireAll": true,
+      "patterns": [ "API", "API\\ Client", "Backend", "Database", "Data", "Connections", "Workers", "Worker", "Scheduler", "Schedules", "Infrastructure", "Security", "Authentication", "Migration", "Unit\\ tests", "Performance", "Configuration", "Logging" ]
+    },
+    "uiConsistencyApplies": {
+      "type": "all",
+      "conditions": [
+        { "type": "not", "condition": { "type": "ref", "name": "isBug" } },
+        { "type": "not", "condition": { "type": "ref", "name": "isInvestigation" } },
+        { "type": "fieldMatches", "path": "$.issueType", "patterns": [ "Feature|Improvement|Story|Enhancement" ] }
+      ]
+    },
+    "isUiTicket": {
+      "type": "all",
+      "conditions": [
+        { "type": "ref", "name": "uiConsistencyApplies" },
+        {
+          "type": "any",
+          "conditions": [
+            {
+              "type": "all",
+              "conditions": [
+                { "type": "not", "condition": { "type": "ref", "name": "nonUiComponentsOnly" } },
+                { "type": "fieldMatches", "path": "$.components", "patterns": [ "\\bUI\\b", "\\bFrontend\\b", "\\bFront-End\\b", "\\bWeb\\b", "\\bPortal\\b", "\\bDashboard\\b" ] }
+              ]
+            },
+            { "type": "fieldMatches", "path": "$.labels", "patterns": [ "^ui$", "^frontend$", "^front-end$", "^web-ui$", "^ux$", "^visual$", "^design$" ] },
+            {
+              "type": "all",
+              "conditions": [
+                { "type": "not", "condition": { "type": "ref", "name": "nonUiComponentsOnly" } },
+                {
+                  "type": "measure",
+                  "atLeast": 2,
+                  "of": {
+                    "type": "patternMatchCount",
+                    "source": { "paths": [ "$.title", "$.description" ] },
+                    "patterns": [ "\\bUI\\b", "\\buser\\s+interface\\b", "\\bscreen\\b", "\\bdialog\\b", "\\bmodal\\b", "\\bform\\b", "\\bbutton\\b", "\\bpage\\b", "\\bpanel\\b", "\\bdashboard\\b", "\\bwidget\\b", "\\bview\\b", "\\blayout\\b", "\\btoolbar\\b", "\\bmenu\\b", "\\bdropdown\\b", "\\btab\\b", "\\bnavigation\\b", "\\bfront[- ]?end\\b", "\\bstyle\\b", "\\bCSS\\b", "\\btheme\\b", "\\bicon\\b", "\\btooltip\\b", "\\bpopup\\b", "\\bpopover\\b", "\\bgrid\\b", "\\btable\\b", "\\bcolumn\\b", "\\bheader\\b", "\\bfooter\\b", "\\bsidebar\\b" ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "hasPanelableSections": {
+      "type": "all",
+      "conditions": [
+        { "type": "fieldEquals", "path": "$.platform", "values": [ "Jira" ] },
+        { "type": "measure", "atLeast": 2, "of": { "type": "sectionPanelCount", "source": { "paths": [ "$.description" ] }, "count": "panelable" } }
+      ]
+    },
+    "isCliRelated": { "type": "textMatches", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "magicsuite\\s+cli", "ms\\s+cli", "command[\\s-]?line", "msmagic", "cli\\s+command", "--\\w+", "invoke[\\s-]command" ] },
+    "hasCliLabel": { "type": "fieldMatches", "path": "$.labels", "patterns": [ "CLI|Command" ] },
+    "hasCliComponent": { "type": "fieldMatches", "path": "$.components", "patterns": [ "CLI" ] },
+    "hasUiIndicators": { "type": "textMatches", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "button", "click", "dialog", "modal", "dropdown", "menu", "screen", "page", "form", "input\\s+field", "checkbox", "radio", "tab", "panel", "dashboard", "report\\s*studio", "ui\\s+", "user\\s+interface", "browser", "blazor" ] },
+    "hasUiLabel": { "type": "fieldMatches", "path": "$.labels", "patterns": [ "^(UI|Blazor|ReportStudio)$" ] }
+  },
+  "categories": [
+    {
+      "name": "Ticket Quality",
+      "description": "Specification completeness of a bug, story, task or change request.",
+      "assessmentExecutionStrategy": "series",
+      "appliesWhen": { "type": "not", "condition": { "type": "ref", "name": "isEpic" } },
+      "assessments": [
+        {
+          "name": "Component",
+          "description": "The component the ticket concerns is identified.",
+          "weight": 14,
+          "appliesWhen": { "type": "ref", "name": "supportsComponents" },
+          "notApplicableExplanation": "○ Component: Not applicable for the {$.project} project",
+          "definition": {
+            "type": "tiered",
+            "measures": { "components": { "type": "itemCount", "path": "$.components" } },
+            "tiers": [
+              { "when": { "type": "measure", "measure": "components", "atLeast": 1 }, "score": 100, "finding": "✓ Component: {$.components[0]}" },
+              { "when": { "type": "fieldMatches", "path": "$.labels", "patterns": [ "DataMagic|ReportMagic|AlertMagic|Admin|Connect|CLI|Docs" ] }, "score": 70, "finding": "⚠ Component: Via label ({$.labels~DataMagic|ReportMagic|AlertMagic|Admin|Connect|CLI|Docs})", "recommendation": "Set component field" },
+              { "when": { "type": "textMatches", "source": { "paths": [ "$.title" ] }, "patterns": [ "DataMagic|ReportMagic|AlertMagic|Admin|Connect|CLI|Docs|Report\\s*Studio" ] }, "score": 50, "finding": "⚠ Component: Mentioned in summary only", "recommendation": "Set component field explicitly" },
+              { "score": 0, "finding": "✗ Component: Not identified", "recommendation": "Add component to issue" }
+            ]
+          }
+        },
+        {
+          "name": "Description",
+          "description": "The description says enough.",
+          "weight": 14,
+          "definition": {
+            "type": "tiered",
+            "measures": { "words": { "type": "wordCount", "source": { "paths": [ "$.description" ] } } },
+            "tiers": [
+              { "when": { "type": "measure", "measure": "words", "atLeast": 100 }, "score": 100, "finding": "✓ Description: {words} words (comprehensive)" },
+              { "when": { "type": "measure", "measure": "words", "atLeast": 50 }, "score": 80, "finding": "✓ Description: {words} words (adequate)" },
+              { "when": { "type": "measure", "measure": "words", "atLeast": 20 }, "score": 50, "finding": "⚠ Description: {words} words (brief)", "recommendation": "Add more context to description" },
+              { "when": { "type": "measure", "measure": "words", "atLeast": 1 }, "score": 25, "finding": "⚠ Description: {words} words (minimal)", "recommendation": "Expand description with details" },
+              { "score": 0, "finding": "✗ Description: Empty", "recommendation": "Add description" }
+            ]
+          }
+        },
+        {
+          "name": "Testability",
+          "description": "Pass/fail criteria, or for an investigation its scope and deliverables, are stated.",
+          "weight": 16,
+          "definition": {
+            "type": "tiered",
+            "measures": {
+              "scope": { "type": "patternMatchCount", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "scope:", "h[1-6]\\.[^\\r\\n]*scope", "\\*\\*[^\\r\\n]*scope", "questions?\\s+to\\s+(answer|investigate)", "investigate\\s+(whether|if|how|why)", "determine\\s+(whether|if|how|why)", "find\\s+out", "understand\\s+(how|why|what)" ] },
+              "deliverables": { "type": "patternMatchCount", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "deliverable", "findings", "recommendation", "report", "document", "conclusion", "outcome", "result\\s+of\\s+(investigation|research|analysis)" ] },
+              "criteria": { "type": "patternMatchCount", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "should\\s+(be|display|show|return|have|not)", "must\\s+(be|display|show|return|have|not)", "verify\\s+that", "acceptance\\s+criteria", "h[23]\\.\\s*acceptance\\s+criteria", "expected\\s+(result|behavior|behaviour|outcome)", "pass\\s+criteria", "success\\s+criteria" ] },
+              "criteriaHeadings": { "type": "criteriaHeadingCount", "source": { "paths": [ "$.description" ] } }
+            },
+            "tiers": [
+              { "when": { "type": "all", "conditions": [ { "type": "ref", "name": "isInvestigation" }, { "type": "measure", "measure": "scope", "atLeast": 2 }, { "type": "measure", "measure": "deliverables", "atLeast": 1 } ] }, "score": 100, "finding": "✓ Investigation Clarity: Clear scope and deliverables" },
+              { "when": { "type": "all", "conditions": [ { "type": "ref", "name": "isInvestigation" }, { "type": "measure", "measure": "scope", "atLeast": 1 }, { "type": "measure", "measure": "deliverables", "atLeast": 1 } ] }, "score": 80, "finding": "✓ Investigation Clarity: Scope and deliverables defined" },
+              { "when": { "type": "all", "conditions": [ { "type": "ref", "name": "isInvestigation" }, { "type": "measure", "measure": "scope", "atLeast": 1 } ] }, "score": 50, "finding": "⚠ Investigation Clarity: Missing deliverables", "recommendation": "Define investigation deliverables (findings document, recommendation, report)" },
+              { "when": { "type": "all", "conditions": [ { "type": "ref", "name": "isInvestigation" }, { "type": "measure", "measure": "deliverables", "atLeast": 1 } ] }, "score": 50, "finding": "⚠ Investigation Clarity: Missing scope", "recommendation": "Define investigation scope and questions to answer" },
+              { "when": { "type": "ref", "name": "isInvestigation" }, "score": 20, "finding": "✗ Investigation Clarity: No scope or deliverables", "recommendation": "Add investigation scope, questions to answer, and expected deliverables" },
+              { "when": { "type": "measure", "measure": "criteria", "atLeast": 3 }, "score": 100, "finding": "✓ Testability: Clear criteria found" },
+              { "when": { "type": "all", "conditions": [ { "type": "measure", "measure": "criteria", "atLeast": 1 }, { "type": "measure", "measure": "criteriaHeadings", "lessThan": 1 } ] }, "score": 60, "finding": "⚠ Testability: Some criteria found", "recommendation": "Add explicit pass/fail criteria" },
+              { "when": { "type": "measure", "measure": "criteria", "atLeast": 1 }, "score": 60, "finding": "⚠ Testability: Some criteria found", "recommendation": "Make the existing acceptance criteria explicit pass/fail checks, rather than adding another section" },
+              { "score": 20, "finding": "✗ Testability: No clear criteria", "recommendation": "Define acceptance criteria" }
+            ]
+          }
+        },
+        {
+          "name": "StepsToReproduce",
+          "description": "A bug has numbered steps to reproduce under their own heading.",
+          "weight": 12,
+          "definition": {
+            "type": "tiered",
+            "measures": {
+              "steps": { "type": "occurrenceCount", "source": { "paths": [ "$.description" ], "section": "(?:reproduc|\\brepro\\b)" }, "pattern": "(?m)^[ \\t]*(?:#(?!#)|\\d+[.)])[ \\t]+\\S" },
+              "listedElsewhere": { "type": "occurrenceCount", "source": { "paths": [ "$.description" ] }, "pattern": "(?m)^[ \\t]*(?:#(?!#)|\\d+[.)])[ \\t]+\\S" },
+              "sectionText": { "type": "alphanumericCount", "source": { "paths": [ "$.description" ], "section": "(?:reproduc|\\brepro\\b)" } }
+            },
+            "tiers": [
+              { "when": { "type": "ref", "name": "isInvestigation" }, "score": 100, "finding": "○ Steps: Not required for investigations" },
+              { "when": { "type": "all", "conditions": [ { "type": "ref", "name": "isBug" }, { "type": "not", "condition": { "type": "sectionPresent", "source": { "paths": [ "$.description" ], "section": "(?:reproduc|\\brepro\\b)" } } }, { "type": "measure", "measure": "listedElsewhere", "atLeast": 2 } ] }, "score": 0, "finding": "✗ Steps to Reproduce: No steps-to-reproduce section (a numbered list was found, but not under a Steps to Reproduce heading)", "recommendation": "Add an 'h2. Steps to Reproduce' section with numbered steps (Jira '# step' or '1. step')" },
+              { "when": { "type": "all", "conditions": [ { "type": "ref", "name": "isBug" }, { "type": "not", "condition": { "type": "sectionPresent", "source": { "paths": [ "$.description" ], "section": "(?:reproduc|\\brepro\\b)" } } } ] }, "score": 0, "finding": "✗ Steps to Reproduce: No steps-to-reproduce section", "recommendation": "Add an 'h2. Steps to Reproduce' section with numbered steps (Jira '# step' or '1. step')" },
+              { "when": { "type": "all", "conditions": [ { "type": "ref", "name": "isBug" }, { "type": "measure", "measure": "steps", "atLeast": 2 } ] }, "score": 100, "finding": "✓ Steps to Reproduce: {steps} numbered steps" },
+              { "when": { "type": "all", "conditions": [ { "type": "ref", "name": "isBug" }, { "type": "textMatches", "source": { "paths": [ "$.description" ], "section": "(?:reproduc|\\brepro\\b)" }, "patterns": [ "(?i)\\b(?:not|never)\\s+(?:been\\s+)?(?:reliably\\s+|consistently\\s+)?reproduc|\\b(?:cannot|can't|could\\s+not|couldn't|unable\\s+to)\\s+(?:be\\s+)?(?:reliably\\s+|consistently\\s+)?reproduc|\\bintermittent" ] }, { "type": "measure", "measure": "sectionText", "atLeast": 60 } ] }, "score": 60, "finding": "⚠ Steps to Reproduce: Stated as not reproducible on demand, with observed conditions", "recommendation": "Add numbered steps once a reliable reproduction is found; until then the ticket stays at GOOD" },
+              { "when": { "type": "all", "conditions": [ { "type": "ref", "name": "isBug" }, { "type": "textMatches", "source": { "paths": [ "$.description" ], "section": "(?:reproduc|\\brepro\\b)" }, "patterns": [ "(?i)\\b(?:not|never)\\s+(?:been\\s+)?(?:reliably\\s+|consistently\\s+)?reproduc|\\b(?:cannot|can't|could\\s+not|couldn't|unable\\s+to)\\s+(?:be\\s+)?(?:reliably\\s+|consistently\\s+)?reproduc|\\bintermittent" ] } ] }, "score": 30, "finding": "⚠ Steps to Reproduce: Stated as not reproducible, with no observed conditions", "recommendation": "Describe when it was seen: environment, frequency, time, data and what was being done" },
+              { "when": { "type": "all", "conditions": [ { "type": "ref", "name": "isBug" }, { "type": "measure", "measure": "steps", "atLeast": 1 } ] }, "score": 60, "finding": "⚠ Steps to Reproduce: Only one numbered step", "recommendation": "Break the reproduction into numbered steps from a known starting state" },
+              { "when": { "type": "all", "conditions": [ { "type": "ref", "name": "isBug" }, { "type": "any", "conditions": [ { "type": "placeholder", "source": { "paths": [ "$.description" ], "section": "(?:reproduc|\\brepro\\b)" } }, { "type": "measure", "measure": "sectionText", "lessThan": 15 } ] } ] }, "score": 0, "finding": "✗ Steps to Reproduce: Heading present but the section is empty or a placeholder", "recommendation": "Fill in the steps to reproduce - a heading over 'TBD' does not say how to see the bug" },
+              { "when": { "type": "ref", "name": "isBug" }, "score": 40, "finding": "⚠ Steps to Reproduce: Section present but the steps are not numbered", "recommendation": "Rewrite the steps to reproduce as a numbered list" },
+              { "when": { "type": "textMatches", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "steps?\\s*(to\\s+reproduce|:)", "(?m)^\\s*\\d+\\.\\s+", "(?m)^\\s*#\\s+", "(?m)^\\s*-\\s+", "h[23]\\.\\s*steps?\\s*(to\\s+reproduce)?", "how\\s+to\\s+reproduce", "reproduction\\s+steps", "repro\\s+steps" ] }, "score": 100, "finding": "✓ Steps: Workflow documented" },
+              { "score": 100, "finding": "○ Steps: Not required for this type" }
+            ]
+          }
+        },
+        {
+          "name": "CurrentVsExpected",
+          "description": "Current and expected behaviour are documented, or for an investigation its background.",
+          "weight": 12,
+          "definition": {
+            "type": "tiered",
+            "measures": {
+              "context": { "type": "patternMatchCount", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "background:", "h[1-6]\\.[^\\r\\n]*background", "context:", "h[1-6]\\.[^\\r\\n]*context", "\\*\\*[^\\r\\n]*(background|context)", "motivation:", "why\\s+it\\s+matters", "why\\s+(we|this)", "reason\\s+for", "because" ] },
+              "current": { "type": "patternMatchCount", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "current(ly)?(\\s+behavior|\\s+behaviour)?:", "h[23]\\.\\s*current(\\s*/\\s*actual)?\\s*(behavior|behaviour)", "\\*\\*current\\s*(behavior|behaviour)\\*\\*", "\\*current(\\s*/\\s*actual)?\\s*(behavior|behaviour)?\\*", "\\*actual\\s*(behavior|behaviour)?\\*", "actual(\\s+behavior|\\s+behaviour)?:", "what\\s+happens:", "observed:", "bug:", "issue:", "problem:" ] },
+              "expected": { "type": "patternMatchCount", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "expected(\\s+behavior|\\s+behaviour)?:", "h[23]\\.\\s*expected\\s*(behavior|behaviour)", "\\*\\*expected\\s*(behavior|behaviour)\\*\\*", "\\*expected\\s*(behavior|behaviour)?\\*", "should\\s+be:", "desired:", "correct\\s+behavior:", "fix:", "solution:", "h2\\.\\s*acceptance\\s+criteria", "h3\\.\\s*acceptance\\s+criteria", "acceptance\\s+criteria:", "\\*\\*acceptance\\s+criteria\\*\\*" ] }
+            },
+            "tiers": [
+              { "when": { "type": "all", "conditions": [ { "type": "ref", "name": "isInvestigation" }, { "type": "measure", "measure": "context", "atLeast": 2 } ] }, "score": 100, "finding": "✓ Investigation Context: Well documented" },
+              { "when": { "type": "all", "conditions": [ { "type": "ref", "name": "isInvestigation" }, { "type": "measure", "measure": "context", "atLeast": 1 } ] }, "score": 70, "finding": "⚠ Investigation Context: Partial context", "recommendation": "Add more background/motivation for the investigation" },
+              { "when": { "type": "ref", "name": "isInvestigation" }, "score": 30, "finding": "⚠ Investigation Context: Missing context", "recommendation": "Add background and motivation for why this investigation is needed" },
+              { "when": { "type": "all", "conditions": [ { "type": "ref", "name": "isBug" }, { "type": "measure", "measure": "current", "atLeast": 1 }, { "type": "measure", "measure": "expected", "atLeast": 1 } ] }, "score": 100, "finding": "✓ Current vs Expected: Both documented" },
+              { "when": { "type": "all", "conditions": [ { "type": "ref", "name": "isBug" }, { "type": "measure", "measure": "current", "atLeast": 1 } ] }, "score": 50, "finding": "⚠ Current vs Expected: Missing expected behavior", "recommendation": "Document both current and expected behavior" },
+              { "when": { "type": "all", "conditions": [ { "type": "ref", "name": "isBug" }, { "type": "measure", "measure": "expected", "atLeast": 1 } ] }, "score": 50, "finding": "⚠ Current vs Expected: Missing current behavior", "recommendation": "Document both current and expected behavior" },
+              { "when": { "type": "ref", "name": "isBug" }, "score": 0, "finding": "✗ Current vs Expected: Neither documented", "recommendation": "Add current behavior and expected behavior sections" },
+              { "when": { "type": "measure", "measure": "expected", "atLeast": 1 }, "score": 100, "finding": "✓ Expected Behavior: Documented" },
+              { "score": 40, "finding": "⚠ Expected Behavior: Not explicit", "recommendation": "Clarify expected outcome" }
+            ]
+          }
+        },
+        {
+          "name": "InvestigationTimebox",
+          "description": "An investigation states how long it may take. Recommendation only; it carries no weight.",
+          "weight": 0,
+          "appliesWhen": { "type": "ref", "name": "isInvestigation" },
+          "definition": {
+            "type": "tiered",
+            "tiers": [
+              { "when": { "type": "textMatches", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "timebox", "time-?box", "\\d+\\s*(hour|day|week)s?", "maximum\\s+time", "time\\s+limit" ] }, "score": 100, "finding": "" },
+              { "score": 0, "finding": "", "recommendation": "Consider adding a timebox for the investigation" }
+            ]
+          }
+        },
+        {
+          "name": "EnvironmentVersion",
+          "description": "The fix version and the environment are stated.",
+          "weight": 7,
+          "definition": {
+            "type": "tiered",
+            "tiers": [
+              { "when": { "type": "not", "condition": { "type": "ref", "name": "supportsFixVersion" } }, "score": 100, "finding": "○ Fix Version: Not applicable on {$.platform}" },
+              { "when": { "type": "all", "conditions": [ { "type": "ref", "name": "hasFixVersion" }, { "type": "ref", "name": "hasEnvironmentMention" } ] }, "score": 100, "finding": "✓ Fix Version: {$.fixVersions[0]}" },
+              { "when": { "type": "ref", "name": "hasFixVersion" }, "score": 70, "finding": "✓ Fix Version: {$.fixVersions[0]}" },
+              { "when": { "type": "all", "conditions": [ { "type": "ref", "name": "shouldHaveFixVersion" }, { "type": "ref", "name": "hasEnvironmentMention" } ] }, "score": 30, "finding": "⚠ Fix Version: Not specified (expected for '{$.status}' status)", "recommendation": "Add fix version" },
+              { "when": { "type": "ref", "name": "shouldHaveFixVersion" }, "score": 0, "finding": "⚠ Fix Version: Not specified (expected for '{$.status}' status)", "recommendation": "Add fix version" },
+              { "score": 100, "finding": "○ Fix Version: Not required yet (status: {$.status})" }
+            ]
+          }
+        },
+        {
+          "name": "Attachments",
+          "description": "A bug carries a screenshot or log.",
+          "weight": 3,
+          "definition": {
+            "type": "tiered",
+            "measures": { "attachments": { "type": "number", "path": "$.attachmentsCount" } },
+            "tiers": [
+              { "when": { "type": "measure", "measure": "attachments", "atLeast": 1 }, "score": 100, "finding": "✓ Attachments: {attachments} item(s)" },
+              { "when": { "type": "textMatches", "source": { "paths": [ "$.description" ] }, "patterns": [ "!\\[|screenshot|image|http.*\\.(png|jpg|gif)" ] }, "score": 70, "finding": "✓ Attachments: Inline images found" },
+              { "when": { "type": "ref", "name": "isBug" }, "score": 0, "finding": "⚠ Attachments: None (recommended for bugs)", "recommendation": "Add screenshot or error log" },
+              { "score": 100, "finding": "○ Attachments: None (optional for non-bugs)" }
+            ]
+          }
+        },
+        {
+          "name": "Documentation",
+          "description": "Documentation or help updates are referenced.",
+          "weight": 13,
+          "definition": {
+            "type": "tiered",
+            "measures": { "references": { "type": "patternMatchCount", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "documentation|docs?", "help\\s+(file|topic|section)", "user\\s+guide", "knowledge\\s+base|kb\\s+article", "wiki|confluence", "readme|readme\\.md", "api\\s+(reference|documentation|docs)", "manual", "guide|tutorial" ] } },
+            "tiers": [
+              { "when": { "type": "measure", "measure": "references", "atLeast": 2 }, "score": 100, "finding": "✓ Documentation: Multiple references found" },
+              { "when": { "type": "measure", "measure": "references", "atLeast": 1 }, "score": 70, "finding": "✓ Documentation: Referenced", "recommendation": "Consider adding more documentation updates" },
+              { "score": 0, "finding": "⚠ Documentation: Not referenced", "recommendation": "Update documentation/help text for this change" }
+            ]
+          }
+        },
+        {
+          "name": "Certifications",
+          "description": "A new feature has a certification exam question.",
+          "weight": 4,
+          "definition": {
+            "type": "tiered",
+            "tiers": [
+              { "when": { "type": "ref", "name": "isBug" }, "score": 100, "finding": "○ Certifications: Not applicable for bugs" },
+              { "when": { "type": "textMatches", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "certifica?tion|exam|certification\\s+question", "cert\\s+question", "assessment\\s+question", "test\\s+question" ] }, "score": 100, "finding": "✓ Certifications: Exam question(s) created" },
+              { "score": 0, "finding": "○ Certifications: No exam question created", "recommendation": "Consider creating a certification exam question for this new feature" }
+            ]
+          }
+        },
+        {
+          "name": "UIConsistency",
+          "description": "A UI change references the look and feel of similar features, or says there are none.",
+          "weight": 13,
+          "definition": {
+            "type": "tiered",
+            "measures": { "references": { "type": "patternMatchCount", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "consistent\\s+(with|look|feel|style|design|behaviour|behavior)", "look\\s+and\\s+feel", "match(es|ing)?\\s+(the|existing|current|other|similar)", "similar\\s+(to|feature|screen|page|dialog|panel|view|component)", "same\\s+(style|approach|pattern|design|way)\\s+(as|used)", "in\\s+line\\s+with", "align(ed)?\\s+with", "follows?\\s+(the|existing|current)\\s+(pattern|convention|style|design)", "precedent", "no\\s+similar\\s+(feature|screen|page|component|view)", "no\\s+existing\\s+(feature|screen|page|component|view)", "first\\s+of\\s+(its|this)\\s+kind", "new\\s+pattern", "no\\s+precedent", "h[23]\\.\\s*UI\\s+Consistency", "\\*\\*UI\\s+Consistency\\*\\*", "UI\\s+consistency:" ] } },
+            "tiers": [
+              { "when": { "type": "not", "condition": { "type": "ref", "name": "uiConsistencyApplies" } }, "score": 100, "finding": "○ UI Consistency: Not applicable for {$.issueType}" },
+              { "when": { "type": "not", "condition": { "type": "ref", "name": "isUiTicket" } }, "score": 100, "finding": "○ UI Consistency: Not a UI ticket" },
+              { "when": { "type": "measure", "measure": "references", "atLeast": 2 }, "score": 100, "finding": "✓ UI Consistency: Look & feel references with similar features" },
+              { "when": { "type": "measure", "measure": "references", "atLeast": 1 }, "score": 70, "finding": "⚠ UI Consistency: Partial reference to similar features", "recommendation": "Expand UI consistency details - reference specific similar features or state there are none" },
+              { "score": 0, "finding": "✗ UI Consistency: No reference to look & feel or similar features", "recommendation": "Add UI consistency details or explicitly state no similar features exist" }
+            ]
+          }
+        },
+        {
+          "name": "BusinessCase",
+          "description": "The value, impact or cost of not doing the work is stated.",
+          "weight": 12,
+          "definition": {
+            "type": "tiered",
+            "measures": { "justification": { "type": "patternMatchCount", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "business\\s+case", "business\\s+value", "business\\s+justification", "business\\s+impact", "business\\s+benefit", "cost\\s+of\\s+(not\\s+doing|inaction|delay)", "return\\s+on\\s+investment", "\\bROI\\b", "value\\s+proposition", "revenue\\s+impact", "customer\\s+impact", "user\\s+impact", "compliance\\s+requirement", "regulatory\\s+requirement", "risk\\s+(reduction|mitigation)", "operational\\s+(benefit|efficiency|saving)", "h[23]\\.\\s*(Business\\s+Case|Business\\s+Value|Business\\s+Justification|Motivation|Rationale)", "\\*\\*(Business\\s+Case|Business\\s+Value|Justification|Motivation|Rationale)\\*\\*", "why\\s+(this|we)\\s+(is|are|need|should|must)", "justif(y|ication|ied)", "rationale" ] } },
+            "tiers": [
+              { "when": { "type": "ref", "name": "isBug" }, "score": 100, "finding": "○ Business Case: Not required for bugs" },
+              { "when": { "type": "ref", "name": "isInvestigation" }, "score": 100, "finding": "○ Business Case: Not required for investigations" },
+              { "when": { "type": "measure", "measure": "justification", "atLeast": 3 }, "score": 100, "finding": "✓ Business Case: Clear justification provided" },
+              { "when": { "type": "measure", "measure": "justification", "atLeast": 2 }, "score": 80, "finding": "✓ Business Case: Justification referenced" },
+              { "when": { "type": "measure", "measure": "justification", "atLeast": 1 }, "score": 50, "finding": "⚠ Business Case: Brief justification", "recommendation": "Expand business case with impact, value, or cost of inaction" },
+              { "score": 0, "finding": "✗ Business Case: Not provided", "recommendation": "Add a business case explaining the value, impact, or cost of not doing this work" }
+            ]
+          }
+        },
+        {
+          "name": "RollbackPlan",
+          "description": "A change request documents how the change is undone.",
+          "weight": 34,
+          "appliesWhen": { "type": "ref", "name": "isChangeRequest" },
+          "definition": {
+            "type": "tiered",
+            "measures": { "planText": { "type": "alphanumericCount", "source": { "paths": [ "$.description" ], "section": "(?:rollback|mitigation)" } } },
+            "tiers": [
+              { "when": { "type": "not", "condition": { "type": "sectionPresent", "source": { "paths": [ "$.description" ], "section": "(?:rollback|mitigation)" } } }, "score": 0, "finding": "✗ Rollback Plan: No rollback or mitigation section", "recommendation": "Add a 'Rollback plan' section: what is captured before the change, what reverses it, and what is not reversible" },
+              { "when": { "type": "placeholder", "source": { "paths": [ "$.description" ], "section": "(?:rollback|mitigation)" } }, "score": 0, "finding": "✗ Rollback Plan: Heading present but the section is empty or a placeholder", "recommendation": "Fill in the rollback plan - a heading over 'TBD' does not describe how the change is undone" },
+              { "when": { "type": "measure", "measure": "planText", "lessThan": 15 }, "score": 0, "finding": "✗ Rollback Plan: Section too short to describe anything", "recommendation": "Expand the rollback plan to state what reverses the change and what cannot be reversed" },
+              { "when": { "type": "measure", "measure": "planText", "lessThan": 120 }, "score": 60, "finding": "⚠ Rollback Plan: Present but brief", "recommendation": "Expand the rollback plan: name what is captured beforehand, and say what is irreversible and what compensates for it" },
+              { "score": 100, "finding": "✓ Rollback Plan: Documented" }
+            ]
+          }
+        },
+        {
+          "name": "Presentation",
+          "description": "Each section sits in an untitled panel directly under its h2 heading, so the layout can be scanned and found again; sections holding a table or code block are exempt.",
+          "weight": 8,
+          "appliesWhen": { "type": "ref", "name": "hasPanelableSections" },
+          "definition": {
+            "type": "tiered",
+            "measures": {
+              "panelable": { "type": "sectionPanelCount", "source": { "paths": [ "$.description" ] }, "count": "panelable" },
+              "panelled": { "type": "sectionPanelCount", "source": { "paths": [ "$.description" ] }, "count": "panelled" },
+              "unpanelled": { "type": "sectionPanelCount", "source": { "paths": [ "$.description" ] }, "count": "unpanelled" },
+              "titled": { "type": "sectionPanelCount", "source": { "paths": [ "$.description" ] }, "count": "titled" }
+            },
+            "tiers": [
+              { "when": { "type": "all", "conditions": [ { "type": "measure", "measure": "unpanelled", "lessThan": 1 }, { "type": "measure", "measure": "titled", "lessThan": 1 } ] }, "score": 100, "finding": "✓ Presentation: {panelled} sections in untitled panels" },
+              { "when": { "type": "measure", "measure": "unpanelled", "lessThan": 1 }, "score": 70, "finding": "⚠ Presentation: {titled} panel titles repeat their heading ({titled:text})", "recommendation": "Remove the title from each panel that sits directly under a heading, since the heading already names it: keep only the background colour, as in panel:bgColor=#F4F5F7" },
+              { "when": { "type": "measure", "measure": "panelled", "atLeast": 1 }, "score": 50, "finding": "⚠ Presentation: {unpanelled} of {panelable} sections are not in a panel ({unpanelled:text})", "recommendation": "Put the content of each section in an untitled panel directly under its heading; a section holding a table or code block can stay as it is" },
+              { "score": 20, "finding": "✗ Presentation: None of {panelable} sections is in a panel ({unpanelled:text})", "recommendation": "Put the content of each section in an untitled panel directly under its heading, for example one with only a background colour, panel:bgColor=#F4F5F7; a section holding a table or code block can stay as it is" }
+            ]
+          }
+        },
+        {
+          "name": "CriteriaDuplication",
+          "description": "Acceptance criteria are stated under one heading only. It carries no weight; duplication caps the score instead.",
+          "weight": 0,
+          "definition": {
+            "type": "tiered",
+            "measures": { "headings": { "type": "criteriaHeadingCount", "source": { "paths": [ "$.description" ] } } },
+            "tiers": [
+              { "when": { "type": "measure", "measure": "headings", "atLeast": 2 }, "score": 0, "finding": "✗ Duplication: acceptance criteria stated under {headings} headings ({headings:text}), so EXCELLENT is unreachable (score capped at 79)", "recommendation": "State the acceptance criteria once, under one heading, and remove the others" },
+              { "score": 100, "finding": "" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Epic Quality",
+      "description": "Specification completeness of an epic: design, breakdown, scope and success criteria.",
+      "assessmentExecutionStrategy": "series",
+      "appliesWhen": { "type": "ref", "name": "isEpic" },
+      "assessments": [
+        {
+          "name": "EpicComponent",
+          "description": "The component the epic concerns is set.",
+          "weight": 10,
+          "appliesWhen": { "type": "ref", "name": "supportsComponents" },
+          "notApplicableExplanation": "○ Component: Not applicable for the {$.project} project",
+          "definition": {
+            "type": "tiered",
+            "measures": { "components": { "type": "itemCount", "path": "$.components" } },
+            "tiers": [
+              { "when": { "type": "measure", "measure": "components", "atLeast": 1 }, "score": 100, "finding": "✓ Component: {$.components[0]}" },
+              { "score": 0, "finding": "✗ Component: Not set", "recommendation": "Set the component field" }
+            ]
+          }
+        },
+        {
+          "name": "EpicDescription",
+          "description": "The epic's description states the problem and the solution.",
+          "weight": 18,
+          "definition": {
+            "type": "tiered",
+            "measures": { "words": { "type": "wordCount", "source": { "paths": [ "$.description" ] } } },
+            "tiers": [
+              { "when": { "type": "measure", "measure": "words", "atLeast": 200 }, "score": 100, "finding": "✓ Description: {words} words (comprehensive)" },
+              { "when": { "type": "measure", "measure": "words", "atLeast": 100 }, "score": 80, "finding": "✓ Description: {words} words (good)" },
+              { "when": { "type": "measure", "measure": "words", "atLeast": 50 }, "score": 50, "finding": "⚠ Description: {words} words (brief for an epic)", "recommendation": "Expand description with problem statement and solution overview" },
+              { "when": { "type": "measure", "measure": "words", "atLeast": 1 }, "score": 25, "finding": "⚠ Description: {words} words (minimal)", "recommendation": "Add comprehensive problem statement and solution overview" },
+              { "score": 0, "finding": "✗ Description: Empty", "recommendation": "Add description with problem statement and solution overview" }
+            ]
+          }
+        },
+        {
+          "name": "Architecture",
+          "description": "The technical design is described.",
+          "weight": 13,
+          "definition": {
+            "type": "tiered",
+            "measures": { "design": { "type": "patternMatchCount", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "architect(ure|ural)", "design\\s+(overview|decision|approach)", "technical\\s+(design|approach|solution|overview)", "flow\\s+diagram", "sequence\\s+diagram", "data\\s+flow", "system\\s+design", "component\\s+diagram", "integration\\s+point", "API\\s+(design|contract|endpoint)", "schema\\s+(design|change)", "database\\s+(design|change|migration)", "h[23]\\.\\s*(Technical|Architecture|Design)", "\\*\\*(Technical|Architecture|Design)\\s+(Design|Overview|Approach)\\*\\*" ] } },
+            "tiers": [
+              { "when": { "type": "measure", "measure": "design", "atLeast": 3 }, "score": 100, "finding": "✓ Architecture: Comprehensive technical design" },
+              { "when": { "type": "measure", "measure": "design", "atLeast": 2 }, "score": 80, "finding": "✓ Architecture: Technical approach documented" },
+              { "when": { "type": "measure", "measure": "design", "atLeast": 1 }, "score": 50, "finding": "⚠ Architecture: Brief technical mention", "recommendation": "Add technical design details (approach, diagrams, integration points)" },
+              { "score": 0, "finding": "✗ Architecture: No technical design", "recommendation": "Add architecture/technical design section" }
+            ]
+          }
+        },
+        {
+          "name": "Decomposition",
+          "description": "The work is broken down into child tickets or phases.",
+          "weight": 13,
+          "definition": {
+            "type": "tiered",
+            "measures": { "breakdown": { "type": "patternMatchCount", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "child\\s+(ticket|issue|task|story)", "sub-task", "breakdown", "decompos(e|ed|ition)", "phase\\s*\\d", "step\\s*\\d", "work\\s*(stream|package|item)", "MS-\\d{4,5}", "implementation\\s+order", "dependencies", "h[23]\\.\\s*(Breakdown|Decomposition|Child|Sub-tasks|Implementation\\s+Order|Work\\s+Items)", "\\*\\*(Breakdown|Decomposition|Child|Sub-tasks|Implementation\\s+Order)\\*\\*" ] } },
+            "tiers": [
+              { "when": { "type": "measure", "measure": "breakdown", "atLeast": 3 }, "score": 100, "finding": "✓ Decomposition: Clear work breakdown" },
+              { "when": { "type": "measure", "measure": "breakdown", "atLeast": 2 }, "score": 80, "finding": "✓ Decomposition: Work items referenced" },
+              { "when": { "type": "measure", "measure": "breakdown", "atLeast": 1 }, "score": 50, "finding": "⚠ Decomposition: Partial breakdown", "recommendation": "Add clear work breakdown with child tickets or phases" },
+              { "score": 0, "finding": "✗ Decomposition: No work breakdown", "recommendation": "Decompose into child tickets or define implementation phases" }
+            ]
+          }
+        },
+        {
+          "name": "ScopeDefinition",
+          "description": "What is in and out of scope is defined.",
+          "weight": 13,
+          "definition": {
+            "type": "tiered",
+            "measures": { "scope": { "type": "patternMatchCount", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "in\\s+scope", "out\\s+of\\s+scope", "scope\\s+(of|definition|boundary|boundaries)", "not\\s+included", "excluded", "boundaries", "goal(s)?", "objective(s)?", "non-goal", "h[23]\\.\\s*(Scope|Goal|Objective|Boundaries|Non-Goal|Out of Scope)", "\\*\\*(Scope|Goal|Objective|In Scope|Out of Scope|Non-Goal)\\*\\*" ] } },
+            "tiers": [
+              { "when": { "type": "measure", "measure": "scope", "atLeast": 3 }, "score": 100, "finding": "✓ Scope: Well-defined boundaries" },
+              { "when": { "type": "measure", "measure": "scope", "atLeast": 2 }, "score": 80, "finding": "✓ Scope: Goals documented" },
+              { "when": { "type": "measure", "measure": "scope", "atLeast": 1 }, "score": 50, "finding": "⚠ Scope: Partially defined", "recommendation": "Clarify what is in scope and out of scope" },
+              { "score": 0, "finding": "✗ Scope: Not defined", "recommendation": "Add scope boundaries (in scope, out of scope, goals)" }
+            ]
+          }
+        },
+        {
+          "name": "AcceptanceCriteria",
+          "description": "The epic's success criteria and definition of done are stated.",
+          "weight": 13,
+          "definition": {
+            "type": "tiered",
+            "measures": { "criteria": { "type": "patternMatchCount", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "acceptance\\s+criteria", "success\\s+criteria", "done\\s+when", "definition\\s+of\\s+done", "complete\\s+when", "considered\\s+complete", "epic\\s+(is\\s+)?complete", "milestone", "deliverable(s)?", "h[23]\\.\\s*(Acceptance|Success|Done|Definition of Done|Deliverables)", "\\*\\*(Acceptance|Success)\\s+Criteria\\*\\*" ] } },
+            "tiers": [
+              { "when": { "type": "measure", "measure": "criteria", "atLeast": 2 }, "score": 100, "finding": "✓ Acceptance Criteria: High-level success criteria defined" },
+              { "when": { "type": "measure", "measure": "criteria", "atLeast": 1 }, "score": 70, "finding": "⚠ Acceptance Criteria: Partially defined", "recommendation": "Add clearer definition of done for this epic" },
+              { "score": 0, "finding": "✗ Acceptance Criteria: Not defined", "recommendation": "Add high-level acceptance/success criteria and definition of done" }
+            ]
+          }
+        },
+        {
+          "name": "FixVersion",
+          "description": "The epic's fix version is set once it is expected.",
+          "weight": 5,
+          "definition": {
+            "type": "tiered",
+            "tiers": [
+              { "when": { "type": "not", "condition": { "type": "ref", "name": "supportsFixVersion" } }, "score": 100, "finding": "○ Fix Version: Not applicable on {$.platform}" },
+              { "when": { "type": "ref", "name": "hasFixVersion" }, "score": 100, "finding": "✓ Fix Version: {$.fixVersions[0]}" },
+              { "when": { "type": "ref", "name": "shouldHaveFixVersion" }, "score": 0, "finding": "⚠ Fix Version: Not set (expected for '{$.status}' status)", "recommendation": "Add fix version" },
+              { "score": 100, "finding": "○ Fix Version: Not required yet (status: {$.status})" }
+            ]
+          }
+        },
+        {
+          "name": "EpicAttachments",
+          "description": "The epic has diagrams or mockups.",
+          "weight": 5,
+          "definition": {
+            "type": "tiered",
+            "measures": { "attachments": { "type": "number", "path": "$.attachmentsCount" } },
+            "tiers": [
+              { "when": { "type": "measure", "measure": "attachments", "atLeast": 1 }, "score": 100, "finding": "✓ Attachments: {attachments} item(s)" },
+              { "when": { "type": "textMatches", "source": { "paths": [ "$.description" ] }, "patterns": [ "!\\[|screenshot|image|diagram|http.*\\.(png|jpg|gif)" ] }, "score": 70, "finding": "✓ Attachments: Inline images/diagrams found" },
+              { "score": 30, "finding": "⚠ Attachments: None (diagrams/mockups recommended for epics)", "recommendation": "Consider adding architecture diagrams or mockups" }
+            ]
+          }
+        },
+        {
+          "name": "EpicPresentation",
+          "description": "Each section sits in an untitled panel directly under its h2 heading, so the layout can be scanned and found again; sections holding a table or code block are exempt.",
+          "weight": 8,
+          "appliesWhen": { "type": "ref", "name": "hasPanelableSections" },
+          "definition": {
+            "type": "tiered",
+            "measures": {
+              "panelable": { "type": "sectionPanelCount", "source": { "paths": [ "$.description" ] }, "count": "panelable" },
+              "panelled": { "type": "sectionPanelCount", "source": { "paths": [ "$.description" ] }, "count": "panelled" },
+              "unpanelled": { "type": "sectionPanelCount", "source": { "paths": [ "$.description" ] }, "count": "unpanelled" },
+              "titled": { "type": "sectionPanelCount", "source": { "paths": [ "$.description" ] }, "count": "titled" }
+            },
+            "tiers": [
+              { "when": { "type": "all", "conditions": [ { "type": "measure", "measure": "unpanelled", "lessThan": 1 }, { "type": "measure", "measure": "titled", "lessThan": 1 } ] }, "score": 100, "finding": "✓ Presentation: {panelled} sections in untitled panels" },
+              { "when": { "type": "measure", "measure": "unpanelled", "lessThan": 1 }, "score": 70, "finding": "⚠ Presentation: {titled} panel titles repeat their heading ({titled:text})", "recommendation": "Remove the title from each panel that sits directly under a heading, since the heading already names it: keep only the background colour, as in panel:bgColor=#F4F5F7" },
+              { "when": { "type": "measure", "measure": "panelled", "atLeast": 1 }, "score": 50, "finding": "⚠ Presentation: {unpanelled} of {panelable} sections are not in a panel ({unpanelled:text})", "recommendation": "Put the content of each section in an untitled panel directly under its heading; a section holding a table or code block can stay as it is" },
+              { "score": 20, "finding": "✗ Presentation: None of {panelable} sections is in a panel ({unpanelled:text})", "recommendation": "Put the content of each section in an untitled panel directly under its heading, for example one with only a background colour, panel:bgColor=#F4F5F7; a section holding a table or code block can stay as it is" }
+            ]
+          }
+        },
+        {
+          "name": "EpicBusinessCase",
+          "description": "Why the epic is valuable is stated.",
+          "weight": 10,
+          "definition": {
+            "type": "tiered",
+            "measures": { "justification": { "type": "patternMatchCount", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "business\\s+case", "business\\s+value", "business\\s+justification", "business\\s+impact", "cost\\s+of\\s+(not\\s+doing|inaction|delay)", "return\\s+on\\s+investment", "\\bROI\\b", "value\\s+proposition", "strategic\\s+(value|benefit|alignment)", "revenue\\s+impact", "customer\\s+impact", "compliance\\s+requirement", "risk\\s+(reduction|mitigation)", "operational\\s+(benefit|efficiency|saving)", "h[23]\\.\\s*(Business\\s+Case|Business\\s+Value|Business\\s+Justification|Motivation|Rationale)", "\\*\\*(Business\\s+Case|Business\\s+Value|Justification|Motivation|Rationale)\\*\\*", "justif(y|ication|ied)", "rationale", "why\\s+(this|we)\\s+(is|are|need|should|must)" ] } },
+            "tiers": [
+              { "when": { "type": "measure", "measure": "justification", "atLeast": 3 }, "score": 100, "finding": "✓ Business Case: Clear justification provided" },
+              { "when": { "type": "measure", "measure": "justification", "atLeast": 2 }, "score": 80, "finding": "✓ Business Case: Justification referenced" },
+              { "when": { "type": "measure", "measure": "justification", "atLeast": 1 }, "score": 50, "finding": "⚠ Business Case: Brief justification", "recommendation": "Expand business case with impact, value, or cost of inaction" },
+              { "score": 0, "finding": "✗ Business Case: Not provided", "recommendation": "Add business case explaining why this epic is valuable" }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "scoreCaps": [
+    {
+      "name": "Criteria duplication",
+      "group": "duplication",
+      "cap": 0.79,
+      "when": { "type": "assessmentScore", "assessment": "CriteriaDuplication", "lessThan": 100 }
+    },
+    {
+      "name": "Steps to reproduce",
+      "group": "mandatory",
+      "cap": 0.79,
+      "when": {
+        "type": "all",
+        "conditions": [
+          { "type": "ref", "name": "isBug" },
+          { "type": "not", "condition": { "type": "ref", "name": "isInvestigation" } },
+          { "type": "assessmentScore", "assessment": "StepsToReproduce", "lessThan": 100 }
+        ]
+      }
+    },
+    {
+      "name": "Rollback plan",
+      "group": "mandatory",
+      "cap": 0.79,
+      "when": { "type": "assessmentScore", "assessment": "RollbackPlan", "lessThan": 1 }
+    }
+  ],
+  "gradeBands": [
+    { "name": "EXCELLENT", "minimumScore": 0.8 },
+    { "name": "GOOD", "minimumScore": 0.6 },
+    { "name": "ADEQUATE", "minimumScore": 0.5 },
+    { "name": "NEEDS IMPROVEMENT", "minimumScore": 0.3 },
+    { "name": "POOR", "minimumScore": 0 }
+  ],
+  "classifications": {
+    "TestAutomationType": [
+      { "when": { "type": "ref", "name": "isEpic" }, "value": "None" },
+      {
+        "when": {
+          "type": "all",
+          "conditions": [
+            { "type": "any", "conditions": [ { "type": "ref", "name": "isCliRelated" }, { "type": "ref", "name": "hasCliLabel" }, { "type": "ref", "name": "hasCliComponent" } ] },
+            { "type": "not", "condition": { "type": "ref", "name": "hasUiIndicators" } },
+            { "type": "not", "condition": { "type": "ref", "name": "hasUiLabel" } }
+          ]
+        },
+        "value": "Ai"
+      },
+      {
+        "when": {
+          "type": "all",
+          "conditions": [
+            { "type": "any", "conditions": [ { "type": "ref", "name": "hasUiIndicators" }, { "type": "ref", "name": "hasUiLabel" } ] },
+            { "type": "any", "conditions": [ { "type": "ref", "name": "isCliRelated" }, { "type": "ref", "name": "hasCliLabel" } ] }
+          ]
+        },
+        "value": "Hybrid"
+      },
+      { "when": { "type": "any", "conditions": [ { "type": "ref", "name": "hasUiIndicators" }, { "type": "ref", "name": "hasUiLabel" } ] }, "value": "Human" },
+      { "value": "None" }
+    ]
+  }
+}

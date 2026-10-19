@@ -136,6 +136,12 @@ report.Recommendations.ForEach(Console.WriteLine);  // what to add to raise the 
 Console.WriteLine(report.ToJson());
 ```
 
+For Magic Suite (`MS`) tickets the rubric also scores release notes (`ReleaseNotes`, and `EpicReleaseNotes` on epics)
+and, for tickets that are not epics, the MUST/SHOULD/MAY classification of acceptance criteria and the Verification
+Evidence section (`TicketContract`). Both have weight 6 and a mandatory cap of 0.79, and neither applies to a ticket
+whose resolution is anything other than Fixed or Done. Documentation and Certifications accept a justified
+`No documentation change: <reason>` or `No certification question: <reason>` line in place of the item.
+
 `BuiltInRubrics.PanoramicDataTicketQualityJson` returns its JSON, a good starting point for your own.
 
 ### Writing a rubric
@@ -180,11 +186,13 @@ The building blocks:
 - **Tiered assessments** (`"type": "tiered"`): tiers are tried in order and the first whose `when` holds gives the
   score (0–100 by default), the finding and an optional recommendation. The last tier has no condition.
 - **Measures** count things: `patternMatchCount`, `occurrenceCount`, `wordCount`, `alphanumericCount`, `length`,
-  `itemCount`, `number`, `criteriaHeadingCount` and `sectionPanelCount` (how many `h2.` sections of Jira wiki text
-  are panelable, panelled, unpanelled or carry a panel title that repeats the heading).
+  `itemCount`, `number`, `criteriaHeadingCount`, `sectionPanelCount` (how many `h2.` sections of Jira wiki text
+  are panelable, panelled, unpanelled or carry a panel title that repeats the heading) and `criteriaClassification`
+  (how many criteria in a section there are, how many are not classified MUST, SHOULD or MAY, and how many are MUST).
 - **Conditions**: `all`, `any`, `not`, `ref` (a named condition), `measure`, `textMatches`, `fieldMatches`,
-  `fieldEquals`, `fieldPresent`, `sectionPresent`, `placeholder` (a section that only says "TBD") and, for caps and
-  classifications, `assessmentScore`.
+  `fieldEquals`, `fieldPresent`, `fieldsDiffer` (two fields differ, ignoring case, surrounding space and an optional
+  prefix), `sectionPresent`, `placeholder` (a section that only says "TBD") and, for caps and classifications,
+  `assessmentScore`.
 - **Text sources** join one or more fields and can narrow to a section by heading, in Jira wiki or Markdown.
 - **Placeholders** in findings and recommendations: `{measure}`, `{measure:text}`, `{$.path}` and
   `{$.path~pattern}` (the first value matching the pattern).
