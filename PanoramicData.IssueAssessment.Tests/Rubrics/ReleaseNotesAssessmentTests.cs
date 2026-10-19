@@ -120,12 +120,13 @@ public class ReleaseNotesAssessmentTests : TestBase
 		{ "Epic", "Schedules: Keep schedule run times across timezone changes", "✗ Release Notes: Same as the summary", SameAsSummaryAdvice },
 		{ "Improvement", "Fixes the issue raised in MS-12345 for all users today", "✗ Release Notes: Not customer-facing (ticket key, file path or code identifier)", NotCustomerFacingAdvice },
 		{ "Epic", "Fixes the issue raised in MS-12345 for all users today", "✗ Release Notes: Not customer-facing (ticket key, file path or code identifier)", NotCustomerFacingAdvice },
-		{ "Improvement", "Schedules now keep their run time — even when the timezone changes", "✗ Release Notes: Contains an em dash", EmDashAdvice },
-		{ "Epic", "Schedules now keep their run time — even when the timezone changes", "✗ Release Notes: Contains an em dash", EmDashAdvice },
+		{ "Improvement", $"Schedules now keep their run time {EmDash} even when the timezone changes", "✗ Release Notes: Contains an em dash", EmDashAdvice },
+		{ "Epic", $"Schedules now keep their run time {EmDash} even when the timezone changes", "✗ Release Notes: Contains an em dash", EmDashAdvice },
 		{ "Improvement", "Schedules now show the correct behavior when the timezone changes for tenants", "✗ Release Notes: US spelling", UsSpellingAdvice },
 		{ "Epic", "Schedules now show the correct behavior when the timezone changes for tenants", "✗ Release Notes: US spelling", UsSpellingAdvice },
 	};
 
+	private static readonly string EmDash = ((char)0x2014).ToString();
 	private const string EmptyAdvice = "Fill in the Release Notes field with one or two customer-facing sentences of at least 8 words saying what changed for the customer";
 	private const string PlaceholderAdvice = "Replace the placeholder in the Release Notes field with one or two sentences saying what changed for the customer";
 	private const string GenericAdvice = "Say what changed and for whom: a generic note such as 'Fixed bug' tells the customer nothing";
@@ -143,7 +144,7 @@ public class ReleaseNotesAssessmentTests : TestBase
 
 		item.Finding.Should().Be(finding);
 		item.Recommendation.Should().Be(recommendation);
-		item.Recommendation.Should().NotContain("—");
+		item.Recommendation.Should().NotContain(EmDash);
 	}
 
 	[Fact]
