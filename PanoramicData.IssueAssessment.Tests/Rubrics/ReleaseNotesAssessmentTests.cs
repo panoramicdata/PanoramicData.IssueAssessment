@@ -106,6 +106,46 @@ public class ReleaseNotesAssessmentTests : TestBase
 		NotesItem(report).Finding.Should().Be("✗ Release Notes: Generic");
 	}
 
+	public static TheoryData<string, string?, string, string> FailingTiers => new()
+	{
+		{ "Improvement", null, "✗ Release Notes: Empty", EmptyAdvice },
+		{ "Epic", null, "✗ Release Notes: Empty", EmptyAdvice },
+		{ "Improvement", "TBD", "✗ Release Notes: Placeholder", PlaceholderAdvice },
+		{ "Epic", "TBD", "✗ Release Notes: Placeholder", PlaceholderAdvice },
+		{ "Improvement", "Various fixes", "✗ Release Notes: Generic", GenericAdvice },
+		{ "Epic", "Various fixes", "✗ Release Notes: Generic", GenericAdvice },
+		{ "Improvement", "Schedules now keep their run time changes", "✗ Release Notes: Under 8 words", ShortAdvice },
+		{ "Epic", "Schedules now keep their run time changes", "✗ Release Notes: Under 8 words", ShortAdvice },
+		{ "Improvement", "Schedules: Keep schedule run times across timezone changes", "✗ Release Notes: Same as the summary", SameAsSummaryAdvice },
+		{ "Epic", "Schedules: Keep schedule run times across timezone changes", "✗ Release Notes: Same as the summary", SameAsSummaryAdvice },
+		{ "Improvement", "Fixes the issue raised in MS-12345 for all users today", "✗ Release Notes: Not customer-facing (ticket key, file path or code identifier)", NotCustomerFacingAdvice },
+		{ "Epic", "Fixes the issue raised in MS-12345 for all users today", "✗ Release Notes: Not customer-facing (ticket key, file path or code identifier)", NotCustomerFacingAdvice },
+		{ "Improvement", "Schedules now keep their run time — even when the timezone changes", "✗ Release Notes: Contains an em dash", EmDashAdvice },
+		{ "Epic", "Schedules now keep their run time — even when the timezone changes", "✗ Release Notes: Contains an em dash", EmDashAdvice },
+		{ "Improvement", "Schedules now show the correct behavior when the timezone changes for tenants", "✗ Release Notes: US spelling", UsSpellingAdvice },
+		{ "Epic", "Schedules now show the correct behavior when the timezone changes for tenants", "✗ Release Notes: US spelling", UsSpellingAdvice },
+	};
+
+	private const string EmptyAdvice = "Fill in the Release Notes field with one or two customer-facing sentences of at least 8 words saying what changed for the customer";
+	private const string PlaceholderAdvice = "Replace the placeholder in the Release Notes field with one or two sentences saying what changed for the customer";
+	private const string GenericAdvice = "Say what changed and for whom: a generic note such as 'Fixed bug' tells the customer nothing";
+	private const string ShortAdvice = "Expand the Release Notes to at least 8 words, saying what changed and who it affects";
+	private const string SameAsSummaryAdvice = "Describe the outcome for the customer rather than repeating the ticket summary";
+	private const string NotCustomerFacingAdvice = "Remove ticket keys, file paths and code identifiers, and describe the change as the customer sees it";
+	private const string EmDashAdvice = "Replace the em dash with a comma, colon or full stop";
+	private const string UsSpellingAdvice = "Use British spelling, for example behaviour, colour, organisation, centre, favourite and cancelled";
+
+	[Theory]
+	[MemberData(nameof(FailingTiers))]
+	public async Task FailingTier_RecommendsAFixForItsOwnRule(string issueType, string? notes, string finding, string recommendation)
+	{
+		AssessmentReportItem item = NotesItem(await AssessAsync(notes, issueType: issueType));
+
+		item.Finding.Should().Be(finding);
+		item.Recommendation.Should().Be(recommendation);
+		item.Recommendation.Should().NotContain("—");
+	}
+
 	[Fact]
 	public async Task Good_Scores100_NoCap()
 	{
