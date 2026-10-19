@@ -48,6 +48,8 @@ public static class JiraIssueMapper
 			FixVersions = Names(fields, "fixVersions"),
 			AttachmentsCount = ArrayLength(fields, "attachment"),
 			DueDate = StringAt(fields, "duedate"),
+			ReleaseNotes = TextField(fields, "customfield_10600"),
+			Resolution = StringAt(fields, "resolution", "name"),
 			Url = BrowseUrl(baseUrl, key),
 			Platform = "Jira",
 		};
@@ -81,11 +83,13 @@ public static class JiraIssueMapper
 		return AdfFlattener.Flatten(document);
 	}
 
-	private static string? Description(JsonElement fields)
-		=> fields.TryGetProperty("description", out JsonElement description) ? description.ValueKind switch
+	private static string? Description(JsonElement fields) => TextField(fields, "description");
+
+	private static string? TextField(JsonElement fields, string property)
+		=> fields.TryGetProperty(property, out JsonElement value) ? value.ValueKind switch
 		{
-			JsonValueKind.String => description.GetString(),
-			JsonValueKind.Object => FlattenAdf(description),
+			JsonValueKind.String => value.GetString(),
+			JsonValueKind.Object => FlattenAdf(value),
 			_ => null,
 		} : null;
 
