@@ -134,6 +134,32 @@ public class TicketContractAssessmentTests : TestBase
 	}
 
 	[Fact]
+	public async Task InlineRfc2119Criteria_Ms27557Form_Pass()
+	{
+		const string criteria = "h2. Acceptance Criteria\r\n# SECTIONPAGES in a header or footer MUST show the page count of its section\r\n# NUMPAGES SHOULD still show the page count of the whole document\r\n";
+
+		ContractItem(await AssessAsync(Summary + criteria)).Finding.Should().Be("✓ Ticket Contract: Criteria classified");
+	}
+
+	[Fact]
+	public async Task LabelThenUnlabelledItems_Ms27609Form_Pass()
+	{
+		const string criteria = "h2. Acceptance Criteria\r\n*MUST*\r\n# A value encrypted under the old key is readable after rotation\r\n# The rotation is recorded in the audit log\r\n*SHOULD*\r\n# The admin is told when the rotation finishes\r\n";
+
+		ContractItem(await AssessAsync(Summary + criteria)).Finding.Should().Be("✓ Ticket Contract: Criteria classified");
+	}
+
+	[Fact]
+	public async Task MixedMustAndMayItem_IsNotClassified()
+		=> ContractItem(await AssessAsync(Summary + "h2. Acceptance Criteria\r\n# MUST: a schedule keeps its run time.\r\n# the list MUST refresh and MAY animate.\r\n"))
+			.Finding.Should().Be("✗ Ticket Contract: 1 criteria not classified MUST/SHOULD/MAY");
+
+	[Fact]
+	public async Task ShouldAndMayLabelsOnly_FailNoMust()
+		=> ContractItem(await AssessAsync(Summary + "h2. Acceptance Criteria\r\n*SHOULD*\r\n# a schedule keeps its run time.\r\n*MAY*\r\n# the list shows the offset.\r\n"))
+			.Finding.Should().Be("✗ Ticket Contract: No MUST criterion");
+
+	[Fact]
 	public async Task LowercaseMay_IsNotAClassification()
 		=> ContractItem(await AssessAsync(Summary + "h2. Acceptance Criteria\r\n# MUST: a schedule keeps its run time.\r\n# may show the offset.\r\n"))
 			.Finding.Should().Be("✗ Ticket Contract: 1 criteria not classified MUST/SHOULD/MAY");

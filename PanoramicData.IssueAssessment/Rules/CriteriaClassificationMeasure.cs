@@ -19,10 +19,16 @@ public enum CriteriaClassificationKind
 
 /// <summary>
 /// Counts the criteria under a section of the text, by their RFC 2119 classification. A criterion is a top-level list
-/// item (<c>#</c>, <c>*</c>, <c>-</c> or <c>1.</c>) or a table row (<c>|</c>, not a <c>||</c> header). It is classified
-/// when the item, or the row's first cell, starts with MUST, SHOULD or MAY in capitals, optionally after <c>*</c> or
-/// <c>(</c>. An absent section counts zero.
+/// item (<c>#</c>, <c>*</c>, <c>-</c> or <c>1.</c>) or a table row (<c>|</c>, not a <c>||</c> header). Keywords are
+/// MUST, SHOULD and MAY as whole words in capitals. An absent section counts zero.
 /// </summary>
+/// <remarks>
+/// A criterion (the item, or the row's first cell) is classified, in order, by: a keyword it starts with, optionally
+/// after <c>*</c> or <c>(</c>; otherwise the one keyword it contains, when it contains exactly one distinct keyword;
+/// otherwise, for a list item, the label line above it. A label line is a line that is not a criterion and starts
+/// with a keyword, optionally bolded or bracketed (<c>*MUST*</c>, <c>MUST:</c>). Its scope runs to the next label line
+/// or wiki heading.
+/// </remarks>
 public sealed partial record CriteriaClassificationMeasure : IMeasure
 {
 	/// <summary>Gets the JSONPath of the text to read.</summary>
@@ -47,19 +53,22 @@ public sealed partial record CriteriaClassificationMeasure : IMeasure
 		int items = 0;
 		int classified = 0;
 		int must = 0;
+		string? label = null;
 		foreach (string line in LineBreak().Split(body))
 		{
-			if (CriterionText(line) is not { } criterion)
+			if (Criterion(line) is not { } criterion)
 			{
+				label = LabelLine().Match(line) is { Success: true } labelLine ? labelLine.Groups[1].Value
+					: WikiHeading().IsMatch(line) ? null
+					: label;
 				continue;
 			}
 
 			items++;
-			Match classification = Classification().Match(criterion);
-			if (classification.Success)
+			if (Classify(criterion.Text, criterion.IsListItem ? label : null) is { } keyword)
 			{
 				classified++;
-				must += classification.Groups[1].Value == "MUST" ? 1 : 0;
+				must += keyword == "MUST" ? 1 : 0;
 			}
 		}
 
@@ -71,16 +80,28 @@ public sealed partial record CriteriaClassificationMeasure : IMeasure
 		};
 	}
 
-	private static string? CriterionText(string line)
+	private static string? Classify(string criterion, string? label)
+	{
+		Match leading = Classification().Match(criterion);
+		if (leading.Success)
+		{
+			return leading.Groups[1].Value;
+		}
+
+		List<string> keywords = [.. Keyword().Matches(criterion).Select(match => match.Value).Distinct(StringComparer.Ordinal)];
+		return keywords.Count == 1 ? keywords[0] : label;
+	}
+
+	private static (string Text, bool IsListItem)? Criterion(string line)
 	{
 		Match item = ListItem().Match(line);
 		if (item.Success)
 		{
-			return item.Groups[1].Value;
+			return (item.Groups[1].Value, true);
 		}
 
 		Match row = TableRow().Match(line);
-		return row.Success && !MarkdownTableRule().IsMatch(row.Groups[1].Value) ? row.Groups[1].Value : null;
+		return row.Success && !MarkdownTableRule().IsMatch(row.Groups[1].Value) ? (row.Groups[1].Value, false) : null;
 	}
 
 	[GeneratedRegex(@"\r?\n", RegexOptions.CultureInvariant, 1000)]
@@ -98,4 +119,14 @@ public sealed partial record CriteriaClassificationMeasure : IMeasure
 
 	[GeneratedRegex(@"^[ \t]*[*(]?[ \t]*(MUST|SHOULD|MAY)\b", RegexOptions.CultureInvariant, 1000)]
 	private static partial Regex Classification();
+
+	[GeneratedRegex(@"\b(?:MUST|SHOULD|MAY)\b", RegexOptions.CultureInvariant, 1000)]
+	private static partial Regex Keyword();
+
+	// No space after the marker, so a "** MUST ..." nested sub-point is not a label.
+	[GeneratedRegex(@"^[ \t]*(?:\*{1,2}|_|\(|\[)?(MUST|SHOULD|MAY)\b", RegexOptions.CultureInvariant, 1000)]
+	private static partial Regex LabelLine();
+
+	[GeneratedRegex(@"^[ \t]*h[1-6]\.", RegexOptions.CultureInvariant, 1000)]
+	private static partial Regex WikiHeading();
 }

@@ -20,7 +20,9 @@ the new checks apply.
   from the summary, customer-facing (no ticket keys other than standards ids, file paths or code identifiers), free of
   em dashes and in British spelling. It does not apply to other projects or to undelivered resolutions.
 - Built-in ticket-quality rubric: MS-only `TicketContract` assessment (not for Epics), weight 6, mandatory cap 0.79.
-  Acceptance criteria must each be classified MUST, SHOULD or MAY, with at least one MUST. From Ready for Test onwards
+  Acceptance criteria must each be classified MUST, SHOULD or MAY, with at least one MUST. A criterion is classified
+  when it starts with a keyword, contains exactly one distinct keyword (the RFC 2119 sentence form), or sits under a
+  label line such as `*MUST*` or `MUST:`. Only capitals count. From Ready for Test onwards
   the ticket needs an `h2. Verification Evidence` section (optionally marked "(Retrospective)") with a criterion table,
   a Reachability block, a Not covered block and a Suggested QA route of A to D.
 - New condition type `fieldsDiffer` and new measure `criteriaClassification`, for rubrics that need them.
