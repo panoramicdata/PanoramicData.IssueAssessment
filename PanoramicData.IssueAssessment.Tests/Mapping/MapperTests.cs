@@ -162,13 +162,16 @@ public class MapperTests
 		JiraIssueMapper.FromRestJson(Json("""{ "fields": {} }""")).ReleaseNotes.Should().BeNull();
 	}
 
+	[Theory]
+	[InlineData("Won't Do")]
+	[InlineData("Fixed")]
+	public void FromRestJson_ReadsResolutionName(string resolution)
+		=> JiraIssueMapper.FromRestJson(Json(JsonSerializer.Serialize(new { fields = new { resolution = new { name = resolution } } })))
+			.Resolution.Should().Be(resolution);
+
 	[Fact]
-	public void FromRestJson_ReadsResolutionName()
-	{
-		JiraIssueMapper.FromRestJson(Json("""{ "fields": { "resolution": { "name": "Won't Do" } } }"""))
-			.Resolution.Should().Be("Won't Do");
-		JiraIssueMapper.FromRestJson(Json("""{ "fields": { "resolution": null } }""")).Resolution.Should().BeNull();
-	}
+	public void FromRestJson_NullResolution_IsNull()
+		=> JiraIssueMapper.FromRestJson(Json("""{ "fields": { "resolution": null } }""")).Resolution.Should().BeNull();
 
 	[Fact]
 	public void ToJsonObject_OmitsNullReleaseNotesAndResolution()

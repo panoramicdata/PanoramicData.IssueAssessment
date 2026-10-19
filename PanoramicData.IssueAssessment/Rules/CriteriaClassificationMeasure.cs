@@ -50,6 +50,17 @@ public sealed partial record CriteriaClassificationMeasure : IMeasure
 			return 0;
 		}
 
+		(int items, int classified, int must) = Tally(body);
+		return Count switch
+		{
+			CriteriaClassificationKind.Unclassified => items - classified,
+			CriteriaClassificationKind.Must => must,
+			_ => items,
+		};
+	}
+
+	private static (int Items, int Classified, int Must) Tally(string body)
+	{
 		int items = 0;
 		int classified = 0;
 		int must = 0;
@@ -58,9 +69,7 @@ public sealed partial record CriteriaClassificationMeasure : IMeasure
 		{
 			if (Criterion(line) is not { } criterion)
 			{
-				label = LabelLine().Match(line) is { Success: true } labelLine ? labelLine.Groups[1].Value
-					: WikiHeading().IsMatch(line) ? null
-					: label;
+				label = LabelAfter(line, label);
 				continue;
 			}
 
@@ -72,12 +81,19 @@ public sealed partial record CriteriaClassificationMeasure : IMeasure
 			}
 		}
 
-		return Count switch
+		return (items, classified, must);
+	}
+
+	/// <summary>The label in force after a line that is not a criterion: a label line sets it, a wiki heading clears it.</summary>
+	private static string? LabelAfter(string line, string? label)
+	{
+		Match labelLine = LabelLine().Match(line);
+		if (labelLine.Success)
 		{
-			CriteriaClassificationKind.Unclassified => items - classified,
-			CriteriaClassificationKind.Must => must,
-			_ => items,
-		};
+			return labelLine.Groups[1].Value;
+		}
+
+		return WikiHeading().IsMatch(line) ? null : label;
 	}
 
 	private static string? Classify(string criterion, string? label)
