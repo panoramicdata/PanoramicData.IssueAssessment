@@ -138,4 +138,24 @@ public class RuleEngineTests : TestBase
 		new TextMatchesCondition { Source = Source("$.d"), Patterns = ["Bug"], CaseSensitive = true }.Evaluate(Context("""{ "d": "bug" }"""))
 			.Should().BeFalse();
 	}
+
+	[Theory]
+	[InlineData("""{ "l": "Keep run times", "r": "Keep run times" }""", false)]
+	[InlineData("""{ "l": "Keep run times", "r": "Keep start times" }""", true)]
+	[InlineData("""{ "l": "  KEEP Run Times ", "r": "keep run times" }""", false)]
+	[InlineData("""{ "l": "Keep run  times", "r": "Keep run times" }""", true)]
+	[InlineData("""{ "r": "" }""", false)]
+	[InlineData("""{ "r": "Keep run times" }""", true)]
+	[InlineData("""{ }""", false)]
+	public void FieldsDiffer_ComparesTrimmedTextIgnoringCase(string json, bool expected)
+		=> new FieldsDifferCondition { Left = "$.l", Right = "$.r" }.Evaluate(Context(json)).Should().Be(expected);
+
+	[Theory]
+	[InlineData("""{ "l": "Schedules: Keep run times", "r": "Keep run times" }""", false)]
+	[InlineData("""{ "l": "Keep run times", "r": "Schedules: Keep run times" }""", false)]
+	[InlineData("""{ "l": "Fix: Keep run times", "r": "Bug: keep run times" }""", false)]
+	[InlineData("""{ "l": "Schedules: Keep run times", "r": "Keep start times" }""", true)]
+	[InlineData("""{ "l": "Keep run times: always", "r": "always" }""", false)]
+	public void FieldsDiffer_StripsThePrefixFromBothSides(string json, bool expected)
+		=> new FieldsDifferCondition { Left = "$.l", Right = "$.r", IgnorePrefixPattern = @"^[^:]{1,40}:\s*" }.Evaluate(Context(json)).Should().Be(expected);
 }
