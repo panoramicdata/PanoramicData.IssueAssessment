@@ -282,6 +282,7 @@
             "type": "tiered",
             "measures": { "references": { "type": "patternMatchCount", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "documentation|docs?", "help\\s+(file|topic|section)", "user\\s+guide", "knowledge\\s+base|kb\\s+article", "wiki|confluence", "readme|readme\\.md", "api\\s+(reference|documentation|docs)", "manual", "guide|tutorial" ] } },
             "tiers": [
+              { "when": { "type": "textMatches", "source": { "paths": [ "$.description" ] }, "patterns": [ "(?im)^\\W*no documentation change:\\s*(?!n/?a\\b)\\S.{14,}" ] }, "score": 100, "finding": "✓ Documentation: Not needed (reason given)" },
               { "when": { "type": "measure", "measure": "references", "atLeast": 2 }, "score": 100, "finding": "✓ Documentation: Multiple references found" },
               { "when": { "type": "measure", "measure": "references", "atLeast": 1 }, "score": 70, "finding": "✓ Documentation: Referenced", "recommendation": "Consider adding more documentation updates" },
               { "score": 0, "finding": "⚠ Documentation: Not referenced", "recommendation": "Update documentation/help text for this change" }
@@ -296,6 +297,7 @@
             "type": "tiered",
             "tiers": [
               { "when": { "type": "ref", "name": "isBug" }, "score": 100, "finding": "○ Certifications: Not applicable for bugs" },
+              { "when": { "type": "textMatches", "source": { "paths": [ "$.description" ] }, "patterns": [ "(?im)^\\W*no certification question:\\s*(?!n/?a\\b)\\S.{14,}" ] }, "score": 100, "finding": "✓ Certifications: Not needed (reason given)" },
               { "when": { "type": "textMatches", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "certifica?tion|exam|certification\\s+question", "cert\\s+question", "assessment\\s+question", "test\\s+question" ] }, "score": 100, "finding": "✓ Certifications: Exam question(s) created" },
               { "score": 0, "finding": "○ Certifications: No exam question created", "recommendation": "Consider creating a certification exam question for this new feature" }
             ]
