@@ -92,7 +92,7 @@ public static partial class IssueText
 		for (int current = 0; current < headings.Count; current++)
 		{
 			string headingText = headings[current].Text;
-			if (CriteriaHeadingText.IsMatch(headingText) && !IsMappingTableSection(lines, headings, current))
+			if (CriteriaHeadingText.IsMatch(headingText) && !IsMappingTableSection(lines, headings, current) && !IsInsideEvidenceSection(headings, current))
 			{
 				found.Add(headingText);
 			}

@@ -27,6 +27,10 @@ the new checks apply.
   a Reachability block, a Not covered block and a Suggested QA route of A to D.
 - New condition type `fieldsDiffer` and new measure `criteriaClassification`, for rubrics that need them.
 
+### Fixed
+
+- TicketContract: a Verification Evidence table headed Criterion | Evidence (not only Criterion | Test) is evidence, not restated criteria, so it no longer triggers the duplication cap; a bold sub-heading inside the evidence section (such as *MUST criteria*) is not counted as a criteria heading; and an acceptance-criteria item struck through in full (-text-, optionally followed by a note or moved to KEY) is no longer counted as a criterion of the ticket.
+
 ### Changed
 
 - Documentation and Certifications accept a justified `No documentation change: <reason>` or
