@@ -303,6 +303,18 @@ public class TicketContractAssessmentTests : TestBase
 		=> ContractItem(await AssessAsync(Summary + "h2. Acceptance Criteria\r\n# -MUST: export the report as PDF- (moved to MS-27650)\r\n"))
 			.Finding.Should().Be("✗ Ticket Contract: Acceptance criteria section has no criteria");
 
+	[Fact]
+	public async Task LeadingMinusNumericItem_IsStillACriterion()
+		=> ContractItem(await AssessAsync(Summary + "h2. Acceptance Criteria\r\n# MUST: a schedule keeps its run time.\r\n# -1 offset must be rejected\r\n"))
+			.Finding.Should().Be("✗ Ticket Contract: 1 criteria not classified MUST/SHOULD/MAY");
+
+	[Theory]
+	[InlineData("# MUST: show -5 when negative")]
+	[InlineData("# -1 offset MUST be rejected - (see MS-123)")]
+	public async Task LeadingMinusClassifiedItem_IsStillACriterion(string item)
+		=> ContractItem(await AssessAsync(Summary + $"h2. Acceptance Criteria\r\n# SHOULD: the list shows the offset.\r\n{item}\r\n"))
+			.RawScore.Should().Be(100);
+
 	[Theory]
 	[InlineData("# MUST: export the report as -PDF- only")]
 	[InlineData("# -export- the report as PDF")]
