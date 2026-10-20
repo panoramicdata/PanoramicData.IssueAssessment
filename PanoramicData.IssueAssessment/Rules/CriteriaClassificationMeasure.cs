@@ -20,7 +20,7 @@ public enum CriteriaClassificationKind
 /// <summary>
 /// Counts the criteria under a section of the text, by their RFC 2119 classification. A criterion is a top-level list
 /// item (<c>#</c>, <c>*</c>, <c>-</c> or <c>1.</c>) or a table row (<c>|</c>, not a <c>||</c> header). Keywords are
-/// MUST, SHOULD and MAY as whole words in capitals. An absent section counts zero.
+/// MUST, SHOULD and MAY as whole words in capitals. An absent section counts zero. An item struck through in full (<c>-text-</c>, optionally followed by a note) belongs to\n/// another ticket now and is not counted.
 /// </summary>
 /// <remarks>
 /// A criterion (the item, or the row's first cell) is classified, in order, by: a keyword it starts with, optionally
@@ -110,6 +110,12 @@ public sealed partial record CriteriaClassificationMeasure : IMeasure
 
 	private static (string Text, bool IsListItem)? Criterion(string line)
 	{
+		(string Text, bool IsListItem)? found = Candidate(line);
+		return found is { } candidate && StruckThrough().IsMatch(candidate.Text) ? null : found;
+	}
+
+	private static (string Text, bool IsListItem)? Candidate(string line)
+	{
 		Match item = ListItem().Match(line);
 		if (item.Success)
 		{
@@ -119,6 +125,10 @@ public sealed partial record CriteriaClassificationMeasure : IMeasure
 		Match row = TableRow().Match(line);
 		return row.Success && !MarkdownTableRule().IsMatch(row.Groups[1].Value) ? (row.Groups[1].Value, false) : null;
 	}
+
+	// All of the text is struck through (-text-), then at most a "(note)", an "_note_" or "moved to KEY ..." remark.
+	[GeneratedRegex(@"^[ \t]*-(?=\S)(?:(?!-(?:\s|$)).)+-(?:[ \t]*|[ \t]+(?:\(.*\)|_.*_|moved[ \t]+to[ \t]+[A-Z][A-Z0-9]*-\d+.*)[ \t]*)$", RegexOptions.CultureInvariant, 1000)]
+	private static partial Regex StruckThrough();
 
 	[GeneratedRegex(@"\r?\n", RegexOptions.CultureInvariant, 1000)]
 	private static partial Regex LineBreak();

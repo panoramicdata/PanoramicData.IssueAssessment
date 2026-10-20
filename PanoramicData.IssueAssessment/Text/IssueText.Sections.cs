@@ -106,4 +106,20 @@ public static partial class IssueText
 
 		return end > index + 1 && CriteriaMappingTable.IsMatch(string.Join('\n', lines[(index + 1)..end]));
 	}
+
+	// A weaker heading under a Verification Evidence heading, such as a bold "MUST criteria" line, is a sub-heading of the evidence.
+	private static bool IsInsideEvidenceSection(List<(int Index, int Level, string Text)> headings, int current)
+	{
+		for (int previous = current - 1; previous >= 0; previous--)
+		{
+			if (headings[previous].Level >= headings[current].Level)
+			{
+				continue;
+			}
+
+			return VerificationEvidenceText.IsMatch(headings[previous].Text);
+		}
+
+		return false;
+	}
 }

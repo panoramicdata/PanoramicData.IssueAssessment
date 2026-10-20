@@ -29,7 +29,8 @@ public static partial class IssueText
 
 	private static readonly Regex CriteriaHeadingLine = new(@"^[ \t]*(?:h([1-6])\.|(#{1,6})[ \t]|\*{1,2}(?=[^*\r\n]+\*{1,2}[ \t]*:?[ \t]*$))(.*)$", Options, Timeout);
 	private static readonly Regex CriteriaHeadingText = new(@"(?i)criteria|definition\s+of\s+done|verification\s+evidence", Options, Timeout);
-	private static readonly Regex CriteriaMappingTable = new(@"(?im)^[ \t]*\|.*criteri.*\|.*\btests?\b", Options, Timeout);
+	private static readonly Regex VerificationEvidenceText = new(@"(?i)verification\s+evidence", Options, Timeout);
+	private static readonly Regex CriteriaMappingTable = new(@"(?im)^[ \t]*\|.*criteri.*\|.*\b(?:tests?|evidence)\b", Options, Timeout);
 
 	private static readonly Regex PanelSectionHeading = new(@"^[ \t]*h([12])\.(.*)$", Options, Timeout);
 	private static readonly Regex PanelOpening = new(@"^[ \t]*\{panel(?::([^}]*))?\}", Options | RegexOptions.IgnoreCase, Timeout);
