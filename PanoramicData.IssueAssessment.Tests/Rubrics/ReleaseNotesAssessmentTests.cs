@@ -4,7 +4,7 @@ using PanoramicData.IssueAssessment.Rubrics;
 namespace PanoramicData.IssueAssessment.Tests.Rubrics;
 
 /// <summary>
-/// The MS-only ReleaseNotes assessment: customer-facing release notes are mandatory, so a failing tier caps the score.
+/// The MS-only ReleaseNotes assessment: customer-facing release notes are mandatory from Ready for Test, so a failing tier caps the score from then on.
 /// </summary>
 public class ReleaseNotesAssessmentTests : TestBase
 {
@@ -212,10 +212,43 @@ public class ReleaseNotesAssessmentTests : TestBase
 		report.Caps.Select(cap => cap.Name).Should().Contain(CapName);
 	}
 
+	[Theory]
+	[InlineData("Improvement", "Ready for Progress")]
+	[InlineData("Improvement", "In Progress")]
+	[InlineData("Epic", "In Progress")]
+	public async Task EmptyBeforeReadyForTest_NotRequiredYet_NoCap(string issueType, string status)
+	{
+		AssessmentReport report = await AssessAsync(notes: null, issueType: issueType, status: status);
+
+		NotesItem(report).RawScore.Should().Be(100);
+		NotesItem(report).Finding.Should().Be($"○ Release Notes: Not required yet (status: {status})");
+		report.Caps.Select(cap => cap.Name).Should().NotContain(CapName);
+	}
+
+	[Fact]
+	public async Task FlawedBeforeReadyForTest_StillReported_NoCap()
+	{
+		AssessmentReport report = await AssessAsync("TBD", status: "Ready for Progress");
+
+		NotesItem(report).Finding.Should().Be("✗ Release Notes: Placeholder");
+		report.Caps.Select(cap => cap.Name).Should().NotContain(CapName);
+	}
+
+	[Theory]
+	[InlineData("In Test")]
+	[InlineData("Closed")]
+	public async Task EmptyFromReadyForTestOn_Caps(string status)
+	{
+		AssessmentReport report = await AssessAsync(notes: null, status: status);
+
+		NotesItem(report).Finding.Should().Be("✗ Release Notes: Empty");
+		report.Caps.Select(cap => cap.Name).Should().Contain(CapName);
+	}
+
 	private static AssessmentReportItem NotesItem(AssessmentReport report)
 		=> report.Categories.SelectMany(category => category.Assessments).Single(item => item.Name.EndsWith("ReleaseNotes", StringComparison.Ordinal) && item.Outcome != AssessmentOutcome.NotApplicable);
 
-	private static NormalizedIssue Issue(string? notes, string title = "Keep schedule run times across timezone changes", string issueType = "Improvement", string? resolution = null, ImmutableList<string>? labels = null)
+	private static NormalizedIssue Issue(string? notes, string title = "Keep schedule run times across timezone changes", string issueType = "Improvement", string? resolution = null, ImmutableList<string>? labels = null, string status = "Ready for Test")
 		=> new()
 		{
 			Key = "MS-1",
@@ -223,7 +256,7 @@ public class ReleaseNotesAssessmentTests : TestBase
 			Title = title,
 			Description = Description,
 			IssueType = issueType,
-			Status = "In Progress",
+			Status = status,
 			Platform = "Jira",
 			ReleaseNotes = notes,
 			Resolution = resolution,
@@ -236,6 +269,6 @@ public class ReleaseNotesAssessmentTests : TestBase
 		return AssessmentReport.From(await assessor.AssessAsync(document, CancellationToken));
 	}
 
-	private static Task<AssessmentReport> AssessAsync(string? notes, string title = "Keep schedule run times across timezone changes", string issueType = "Improvement", string? resolution = null, ImmutableList<string>? labels = null)
-		=> ReportAsync(Assessor, Issue(notes, title, issueType, resolution, labels));
+	private static Task<AssessmentReport> AssessAsync(string? notes, string title = "Keep schedule run times across timezone changes", string issueType = "Improvement", string? resolution = null, ImmutableList<string>? labels = null, string status = "Ready for Test")
+		=> ReportAsync(Assessor, Issue(notes, title, issueType, resolution, labels, status));
 }

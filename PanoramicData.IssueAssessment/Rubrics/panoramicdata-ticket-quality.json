@@ -14,6 +14,7 @@
       "conditions": [ { "type": "fieldPresent", "path": "$.resolution" }, { "type": "not", "condition": { "type": "fieldEquals", "path": "$.resolution", "values": [ "Fixed", "Done" ] } } ]
     },
     "contractEvidenceDue": { "type": "fieldEquals", "path": "$.status", "values": [ "Ready for Test", "In Test", "Test Blocked", "Ready for Customer", "With Customer", "Ready for Release", "Closed", "Done", "Resolved" ] },
+    "releaseNotesDue": { "type": "ref", "name": "contractEvidenceDue" },
     "isInvestigation": {
       "type": "all",
       "conditions": [
@@ -382,6 +383,7 @@
           "definition": {
             "type": "tiered",
             "tiers": [
+              { "when": { "type": "all", "conditions": [ { "type": "not", "condition": { "type": "ref", "name": "releaseNotesDue" } }, { "type": "not", "condition": { "type": "fieldPresent", "path": "$.releaseNotes" } } ] }, "score": 100, "finding": "○ Release Notes: Not required yet (status: {$.status})" },
               { "when": { "type": "not", "condition": { "type": "fieldPresent", "path": "$.releaseNotes" } }, "score": 0, "finding": "✗ Release Notes: Empty", "recommendation": "Fill in the Release Notes field with one or two customer-facing sentences of at least 8 words saying what changed for the customer" },
               { "when": { "type": "any", "conditions": [ { "type": "placeholder", "source": { "paths": [ "$.releaseNotes" ] } }, { "type": "fieldMatches", "path": "$.releaseNotes", "patterns": [ "(?i)^\\s*(see (the )?(ticket|description)|none|-+)\\s*\\.?\\s*$" ] } ] }, "score": 0, "finding": "✗ Release Notes: Placeholder", "recommendation": "Replace the placeholder in the Release Notes field with one or two sentences saying what changed for the customer" },
               { "when": { "type": "fieldMatches", "path": "$.releaseNotes", "patterns": [ "(?i)^\\s*(fixed (a )?bugs?|bug ?fix(es)?|various (fixes|improvements)|minor (fixes|improvements))\\s*\\.?\\s*$" ] }, "score": 0, "finding": "✗ Release Notes: Generic", "recommendation": "Say what changed and for whom: a generic note such as 'Fixed bug' tells the customer nothing" },
@@ -608,6 +610,7 @@
           "definition": {
             "type": "tiered",
             "tiers": [
+              { "when": { "type": "all", "conditions": [ { "type": "not", "condition": { "type": "ref", "name": "releaseNotesDue" } }, { "type": "not", "condition": { "type": "fieldPresent", "path": "$.releaseNotes" } } ] }, "score": 100, "finding": "○ Release Notes: Not required yet (status: {$.status})" },
               { "when": { "type": "not", "condition": { "type": "fieldPresent", "path": "$.releaseNotes" } }, "score": 0, "finding": "✗ Release Notes: Empty", "recommendation": "Fill in the Release Notes field with one or two customer-facing sentences of at least 8 words saying what changed for the customer" },
               { "when": { "type": "any", "conditions": [ { "type": "placeholder", "source": { "paths": [ "$.releaseNotes" ] } }, { "type": "fieldMatches", "path": "$.releaseNotes", "patterns": [ "(?i)^\\s*(see (the )?(ticket|description)|none|-+)\\s*\\.?\\s*$" ] } ] }, "score": 0, "finding": "✗ Release Notes: Placeholder", "recommendation": "Replace the placeholder in the Release Notes field with one or two sentences saying what changed for the customer" },
               { "when": { "type": "fieldMatches", "path": "$.releaseNotes", "patterns": [ "(?i)^\\s*(fixed (a )?bugs?|bug ?fix(es)?|various (fixes|improvements)|minor (fixes|improvements))\\s*\\.?\\s*$" ] }, "score": 0, "finding": "✗ Release Notes: Generic", "recommendation": "Say what changed and for whom: a generic note such as 'Fixed bug' tells the customer nothing" },
@@ -663,8 +666,11 @@
       "group": "mandatory",
       "cap": 0.79,
       "when": {
-        "type": "any",
-        "conditions": [ { "type": "assessmentScore", "assessment": "ReleaseNotes", "lessThan": 100 }, { "type": "assessmentScore", "assessment": "EpicReleaseNotes", "lessThan": 100 } ]
+        "type": "all",
+        "conditions": [
+          { "type": "ref", "name": "releaseNotesDue" },
+          { "type": "any", "conditions": [ { "type": "assessmentScore", "assessment": "ReleaseNotes", "lessThan": 100 }, { "type": "assessmentScore", "assessment": "EpicReleaseNotes", "lessThan": 100 } ] }
+        ]
       }
     },
     {
