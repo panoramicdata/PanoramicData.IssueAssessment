@@ -29,6 +29,10 @@ the new checks apply.
 
 ### Fixed
 
+- ReleaseNotes and EpicReleaseNotes apply from Ready for Test onwards, the status at which Release Notes are set. Before
+  then an empty field scores 100 with "○ Release Notes: Not required yet (status: ...)", as Fix Version does, and the
+  "Release notes" mandatory cap does not apply, so a ticket in Ready for Progress can reach EXCELLENT. Notes already
+  written before Ready for Test are still checked and reported, but do not cap the score.
 - TicketContract: a Verification Evidence table headed Criterion | Evidence (not only Criterion | Test) is evidence, not restated criteria, so it no longer triggers the duplication cap; a bold sub-heading inside the evidence section (such as *MUST criteria*) is not counted as a criteria heading; and an acceptance-criteria item struck through in full (-text-, optionally followed by a note or moved to KEY) is no longer counted as a criterion of the ticket.
 
 ### Changed
