@@ -32,11 +32,10 @@ internal static partial class RuleValidator
 		_ => FieldConditionError(condition),
 	};
 
-	private static string? FieldConditionError(ICondition condition) => condition switch
-	{
-		TextMatchesCondition or SectionPresentCondition or PlaceholderCondition => SourceConditionError(condition),
-		_ => PathConditionError(condition),
-	};
+	private static string? FieldConditionError(ICondition condition)
+		=> condition is TextMatchesCondition or SectionPresentCondition or PlaceholderCondition
+			? SourceConditionError(condition)
+			: PathConditionError(condition);
 
 	private static string? SourceConditionError(ICondition condition) => condition switch
 	{
