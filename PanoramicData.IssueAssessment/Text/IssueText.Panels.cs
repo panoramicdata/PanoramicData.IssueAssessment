@@ -24,6 +24,7 @@ public static partial class IssueText
 			return PanelLayout.Empty;
 		}
 
+		text = MaskLiteralBlocks(text);
 		List<string> panelable = [];
 		List<string> unpanelled = [];
 		List<string> titled = [];

@@ -47,19 +47,22 @@ public static partial class IssueText
 		Regex heading = RegexCache.GetOrAdd(@"(?im)^[ \t]*(?:h[1-6]\.|#{1,6}[ \t]|\*{1,2}(?=[^\r\n]*\*{1,2}[ \t]*\r?$))[^\r\n]*" + headingKeywordPattern + @"[^\r\n]*");
 		Regex label = RegexCache.GetOrAdd(@"(?im)^[ \t]*(?![hH][1-6]\.)(?=[A-Za-z])[^\r\n:#*]{0,60}?" + headingKeywordPattern + @"[^\r\n:]{0,60}:[ \t]*\r?$");
 
-		IEnumerable<Match> openings = heading.Matches(text).Concat(label.Matches(text));
+		// Sections are found in the masked text; bodies are cut from the original, which has the same positions.
+		string scan = MaskLiteralBlocks(text);
+		IEnumerable<Match> openings = heading.Matches(scan).Concat(label.Matches(scan));
 
 		// In wiki text a "#" line is a list item, so it cannot open a section; only a "##"-or-deeper line that does not
 		// continue a "#" list may.
-		if (WikiHeadingAnywhere.IsMatch(text))
+		if (WikiHeadingAnywhere.IsMatch(scan))
 		{
-			openings = openings.Where(opening => IsWikiTextOpening(text, opening));
+			openings = openings.Where(opening => IsWikiTextOpening(scan, opening));
 		}
 
 		string? best = null;
 		foreach (Match opening in openings)
 		{
-			string body = SectionAfter(opening.Value, text[(opening.Index + opening.Length)..]);
+			int start = opening.Index + opening.Length;
+			string body = text.Substring(start, SectionAfter(opening.Value, scan[start..]).Length);
 			if (best is null || body.Length > best.Length)
 			{
 				best = body;
@@ -86,6 +89,7 @@ public static partial class IssueText
 			return [];
 		}
 
+		text = MaskLiteralBlocks(text);
 		string[] lines = LineBreak.Split(text);
 		List<(int Index, int Level, string Text)> headings = Headings(lines, WikiHeadingAnywhere.IsMatch(text));
 		List<string> found = [];

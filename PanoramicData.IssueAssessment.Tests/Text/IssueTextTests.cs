@@ -161,4 +161,40 @@ public class IssueTextTests
 	{
 		IssueText.HeadingLevel(line).Should().Be(expected);
 	}
+
+	// Issue #9 (MS-26773): a sample ticket quoted in a literal block brought its own headings with it.
+	public static TheoryData<string, string> QuotedSamples => new()
+	{
+		{ "{noformat}", "{noformat}" },
+		{ "{code}", "{code}" },
+		{ "{code:none}", "{code}" }
+	};
+
+	private static string WithQuotedSample(string open, string close)
+		=> "h2. Summary\r\nAdds a sample.\r\n\r\nh2. Acceptance Criteria\r\n# MUST: the sample renders.\r\n\r\nh2. Notes\r\n"
+			+ open + "\r\nh2. Acceptance Criteria\r\n# MUST: quoted.\r\nh2. Rollback plan\r\nRestore the backup.\r\nh2. Owner\r\nOps.\r\n" + close + "\r\n";
+
+	[Theory]
+	[MemberData(nameof(QuotedSamples))]
+	public void CriteriaHeadings_IgnoresHeadingsInsideLiteralBlocks(string open, string close)
+		=> IssueText.CriteriaHeadings(WithQuotedSample(open, close)).Should().Equal("Acceptance Criteria");
+
+	[Theory]
+	[MemberData(nameof(QuotedSamples))]
+	public void SectionBody_IgnoresHeadingsInsideLiteralBlocks(string open, string close)
+		=> IssueText.SectionBody(WithQuotedSample(open, close), "rollback").Should().BeNull();
+
+	[Theory]
+	[MemberData(nameof(QuotedSamples))]
+	public void SectionBody_KeepsTheLiteralBlockTextUnchanged(string open, string close)
+		=> IssueText.SectionBody(WithQuotedSample(open, close), "notes").Should().Contain("h2. Rollback plan\r\nRestore the backup.");
+
+	[Theory]
+	[MemberData(nameof(QuotedSamples))]
+	public void PanelLayoutOf_IgnoresHeadingsInsideLiteralBlocks(string open, string close)
+	{
+		var layout = IssueText.PanelLayoutOf(WithQuotedSample(open, close));
+
+		layout.Unpanelled.Concat(layout.Panelable).Should().NotContain("Rollback plan");
+	}
 }
