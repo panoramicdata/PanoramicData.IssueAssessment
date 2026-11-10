@@ -35,6 +35,7 @@ public static partial class IssueText
 	private static readonly Regex PanelSectionHeading = new(@"^[ \t]*h([12])\.(.*)$", Options, Timeout);
 	private static readonly Regex PanelOpening = new(@"^[ \t]*\{panel(?::([^}]*))?\}", Options | RegexOptions.IgnoreCase, Timeout);
 	private static readonly Regex PanelBlocker = new(@"^[ \t]*\||\{(?:code|noformat)\b", Options | RegexOptions.IgnoreCase, Timeout);
+	private static readonly Regex LiteralBlockToken = new(@"\{(noformat|code)(?::[^}\r\n]*)?\}", Options | RegexOptions.IgnoreCase, Timeout);
 
 	private static readonly Regex PlaceholderListMarker = new(@"(?m)^[ \t]*(?:[-*#>]+|\d+\.)[ \t]*", Options, Timeout);
 	private static readonly Regex PlaceholderPunctuation = new(@"[\*_`{}\[\]\(\)\|:;,\.\-–—/\\]", Options, Timeout);
