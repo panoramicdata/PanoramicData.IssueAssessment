@@ -40,6 +40,30 @@ public class NotNeededTierTests : TestBase
 		=> (await Item("Certifications", "No certification question: N/A", "Improvement", "MS")).Finding.Should().NotContain("Not needed");
 
 	[Fact]
+	public async Task NegatedExamQuestionWithReason_IsNotNeeded_NotCreated()
+	{
+		// Issue #11 (MS-28010).
+		AssessmentReportItem item = await Item("Certifications", "h2. Documentation\r\nNo certification exam question is proposed for a single display column.", "Improvement", "MS");
+		item.Finding.Should().Be("✓ Certifications: Not needed (reason given)");
+		item.RawScore.Should().Be(100);
+	}
+
+	[Theory]
+	[InlineData("No exam question.")]
+	[InlineData("No certification question.")]
+	public async Task NegatedExamQuestionWithoutReason_IsNotCreated(string description)
+	{
+		AssessmentReportItem item = await Item("Certifications", description, "Improvement", "MS");
+		item.Finding.Should().Be("○ Certifications: No exam question created");
+		item.RawScore.Should().Be(0);
+	}
+
+	[Fact]
+	public async Task ExamQuestionMentionedWithoutNegation_IsStillCreated()
+		=> (await Item("Certifications", "Added certification exam question 42 covering the new column.", "Improvement", "MS"))
+			.Finding.Should().Be("✓ Certifications: Exam question(s) created");
+
+	[Fact]
 	public async Task AppliesToOpsToo()
 	{
 		(await Item("Documentation", "No documentation change: internal refactor with no user-visible behaviour", "Improvement", "OPS")).RawScore.Should().Be(100);

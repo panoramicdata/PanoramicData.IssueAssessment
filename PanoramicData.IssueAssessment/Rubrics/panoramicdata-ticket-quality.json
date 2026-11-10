@@ -299,7 +299,9 @@
             "tiers": [
               { "when": { "type": "ref", "name": "isBug" }, "score": 100, "finding": "○ Certifications: Not applicable for bugs" },
               { "when": { "type": "textMatches", "source": { "paths": [ "$.description" ] }, "patterns": [ "(?im)^\\W*no certification question:\\s*(?!n/?a\\b)\\S.{14,}" ] }, "score": 100, "finding": "✓ Certifications: Not needed (reason given)" },
-              { "when": { "type": "textMatches", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "certifica?tion|exam|certification\\s+question", "cert\\s+question", "assessment\\s+question", "test\\s+question" ] }, "score": 100, "finding": "✓ Certifications: Exam question(s) created" },
+              { "when": { "type": "textMatches", "source": { "paths": [ "$.description" ] }, "patterns": [ "(?i)\\bno\\s+(?:certification\\s+)?(?:exam\\s+|assessment\\s+|test\\s+)?question\\b[^\\r\\n]{10,}" ] }, "score": 100, "finding": "✓ Certifications: Not needed (reason given)" },
+        { "when": { "type": "textMatches", "source": { "paths": [ "$.description" ] }, "patterns": [ "(?i)\\bno\\s+(?:certification\\s+)?(?:exam\\s+|assessment\\s+|test\\s+)?question\\b" ] }, "score": 0, "finding": "○ Certifications: No exam question created", "recommendation": "Consider creating a certification exam question for this new feature" },
+        { "when": { "type": "textMatches", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "certifica?tion|exam|certification\\s+question", "cert\\s+question", "assessment\\s+question", "test\\s+question" ] }, "score": 100, "finding": "✓ Certifications: Exam question(s) created" },
               { "score": 0, "finding": "○ Certifications: No exam question created", "recommendation": "Consider creating a certification exam question for this new feature" }
             ]
           }
