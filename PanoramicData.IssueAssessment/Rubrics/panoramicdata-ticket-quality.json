@@ -28,7 +28,7 @@
                 { "type": "not", "condition": { "type": "ref", "name": "isBug" } },
                 {
                   "type": "textMatches",
-                  "source": { "paths": [ "$.title", "$.description" ] },
+                  "source": { "paths": [ "$.title" ] },
                   "patterns": [ "\\binvestigate\\b", "\\bresearch\\b", "\\bspike\\b", "\\banalysis\\b", "\\bexplore\\b", "\\bfeasibility\\b", "\\bproof\\s+of\\s+concept\\b", "\\bpoc\\b", "\\bstudy\\b", "\\bevaluate\\b", "\\bassess\\b" ]
                 }
               ]
