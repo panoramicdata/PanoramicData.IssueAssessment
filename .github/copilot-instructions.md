@@ -1,6 +1,6 @@
 # Copilot Repository Instructions
 
-PanoramicData.IssueAssessment is a .NET 10 library that scores issue and ticket quality from any JSON
+PanoramicData.IssueAssessment is a .NET 11.0 library that scores issue and ticket quality from any JSON
 document. `DESIGN.md` describes the architecture and `PLAN.md` tracks implementation progress.
 
 ## Formatting
