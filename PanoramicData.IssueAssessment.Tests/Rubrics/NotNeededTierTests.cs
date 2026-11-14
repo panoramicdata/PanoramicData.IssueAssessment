@@ -84,19 +84,7 @@ public class NotNeededTierTests : TestBase
 
 	private static async Task<AssessmentReportItem> Item(string name, string description, string issueType, string project)
 	{
-		NormalizedIssue issue = new()
-		{
-			Key = project + "-1",
-			Project = project,
-			Title = "Tidy the schedule code",
-			Description = description,
-			IssueType = issueType,
-			Status = "In Progress",
-			Platform = "Jira",
-			Labels = [],
-		};
-		using JsonDocument document = issue.ToJsonDocument();
-		AssessmentReport report = AssessmentReport.From(await Assessor.AssessAsync(document, CancellationToken));
+		AssessmentReport report = await AssessJiraAsync(Assessor, project, "Tidy the schedule code", description, issueType);
 		return report.Categories.SelectMany(category => category.Assessments).Single(item => item.Name == name);
 	}
 }

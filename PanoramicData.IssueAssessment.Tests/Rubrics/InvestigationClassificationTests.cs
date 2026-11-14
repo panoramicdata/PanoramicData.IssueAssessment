@@ -68,19 +68,7 @@ public class InvestigationClassificationTests : TestBase
 
 	private static async Task<bool> FlagAsync(string title, string description, List<string> labels, string issueType)
 	{
-		NormalizedIssue issue = new()
-		{
-			Key = "MS-1",
-			Project = "MS",
-			Title = title,
-			Description = description,
-			IssueType = issueType,
-			Status = "In Progress",
-			Platform = "Jira",
-			Labels = [.. labels],
-		};
-		using JsonDocument document = issue.ToJsonDocument();
-		AssessmentReport report = AssessmentReport.From(await Assessor.AssessAsync(document, CancellationToken));
+		AssessmentReport report = await AssessJiraAsync(Assessor, "MS", title, description, issueType, [.. labels]);
 		return report.Flags["isInvestigation"];
 	}
 }
