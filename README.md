@@ -6,6 +6,8 @@
 [![CI](https://github.com/panoramicdata/PanoramicData.IssueAssessment/actions/workflows/ci.yml/badge.svg)](https://github.com/panoramicdata/PanoramicData.IssueAssessment/actions/workflows/ci.yml)
 [![Codacy Badge](https://app.codacy.com/project/badge/grade/PanoramicData.IssueAssessment)](https://app.codacy.com/gh/panoramicdata/PanoramicData.IssueAssessment/dashboard)
 
+> **Need help with APIs or .NET?** Panoramic Data are experts in APIs and .NET, and we can help with your development. [Contact us](https://www.panoramicdata.com/contact-us) or see our [software services](https://www.panoramicdata.com/services/software).
+
 Score the quality of issues and tickets from any system — Jira, GitHub, ServiceNow or your own — with composable,
 weighted, explainable assessments.
 
