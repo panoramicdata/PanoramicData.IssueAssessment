@@ -31,7 +31,22 @@ public class InvestigationClassificationTests : TestBase
 	public async Task InvestigationWordInTitle_IsStillAnInvestigation()
 		=> (await IsInvestigationAsync("Investigate why run durations drift", ImprovementWithBusinessCase, [])).Should().BeTrue();
 
-	private static async Task<bool> IsInvestigationAsync(string title, string description, List<string> labels)
+	[Theory]
+	[InlineData("CaseMagic: MQL should support JQL functions, and refuse clearly the ones CaseMagic cannot evaluate")]
+	[InlineData("Assess the run durations on the schedule list")]
+	[InlineData("Study mode for the schedule list")]
+	[InlineData("Explore button on the schedule list")]
+	[InlineData("Analysis column on the schedule list")]
+	public async Task AmbiguousWordInAnImprovementTitle_IsNotAnInvestigation(string title)
+		=> (await IsInvestigationAsync(title, ImprovementWithBusinessCase, [])).Should().BeFalse();
+
+	[Theory]
+	[InlineData("Evaluate options for the schedule list")]
+	[InlineData("Analysis of run duration drift")]
+	public async Task AmbiguousWordInATaskTitle_IsStillAnInvestigation(string title)
+		=> (await IsInvestigationAsync(title, ImprovementWithBusinessCase, [], "Task")).Should().BeTrue();
+
+	private static async Task<bool> IsInvestigationAsync(string title, string description, List<string> labels, string issueType = "Improvement")
 	{
 		NormalizedIssue issue = new()
 		{
@@ -39,7 +54,7 @@ public class InvestigationClassificationTests : TestBase
 			Project = "MS",
 			Title = title,
 			Description = description,
-			IssueType = "Improvement",
+			IssueType = issueType,
 			Status = "In Progress",
 			Platform = "Jira",
 			Labels = [.. labels],

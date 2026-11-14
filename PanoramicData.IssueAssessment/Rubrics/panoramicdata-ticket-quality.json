@@ -15,6 +15,7 @@
     },
     "contractEvidenceDue": { "type": "fieldEquals", "path": "$.status", "values": [ "Ready for Test", "In Test", "Test Blocked", "Ready for Customer", "With Customer", "Ready for Release", "Closed", "Done", "Resolved" ] },
     "releaseNotesDue": { "type": "ref", "name": "contractEvidenceDue" },
+    "isImprovement": { "type": "fieldEquals", "path": "$.issueType", "values": [ "Improvement" ] },
     "isInvestigation": {
       "type": "all",
       "conditions": [
@@ -29,7 +30,19 @@
                 {
                   "type": "textMatches",
                   "source": { "paths": [ "$.title" ] },
-                  "patterns": [ "\\binvestigate\\b", "\\bresearch\\b", "\\bspike\\b", "\\banalysis\\b", "\\bexplore\\b", "\\bfeasibility\\b", "\\bproof\\s+of\\s+concept\\b", "\\bpoc\\b", "\\bstudy\\b", "\\bevaluate\\b", "\\bassess\\b" ]
+                  "patterns": [ "\\binvestigate\\b", "\\bresearch\\b", "\\bspike\\b", "\\bfeasibility\\b", "\\bproof\\s+of\\s+concept\\b", "\\bpoc\\b" ]
+                }
+              ]
+            },
+            {
+              "type": "all",
+              "conditions": [
+                { "type": "not", "condition": { "type": "ref", "name": "isBug" } },
+                { "type": "not", "condition": { "type": "ref", "name": "isImprovement" } },
+                {
+                  "type": "textMatches",
+                  "source": { "paths": [ "$.title" ] },
+                  "patterns": [ "\\banalysis\\b", "\\bexplore\\b", "\\bstudy\\b", "\\bevaluate\\b", "\\bassess\\b" ]
                 }
               ]
             },
