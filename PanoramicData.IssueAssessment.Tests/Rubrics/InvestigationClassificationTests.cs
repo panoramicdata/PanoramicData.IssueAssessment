@@ -18,18 +18,30 @@ public class InvestigationClassificationTests : TestBase
 
 	[Fact]
 	public async Task InvestigationWordOnlyInDescription_IsNotAnInvestigation()
-		=> (await IsInvestigationAsync("Show run durations on the schedule list", ImprovementWithBusinessCase, [])).Should().BeFalse();
+	{
+		string description = ImprovementWithBusinessCase;
+		bool isInvestigation = await FlagAsync("Show run durations on the schedule list", description, [], "Improvement");
+		isInvestigation.Should().BeFalse();
+	}
 
 	[Theory]
 	[InlineData("investigation")]
 	[InlineData("research")]
 	[InlineData("spike")]
 	public async Task InvestigationLabel_IsStillAnInvestigation(string label)
-		=> (await IsInvestigationAsync("Show run durations on the schedule list", ImprovementWithBusinessCase, [label])).Should().BeTrue();
+	{
+		string description = ImprovementWithBusinessCase;
+		bool isInvestigation = await FlagAsync("Show run durations on the schedule list", description, [label], "Improvement");
+		isInvestigation.Should().BeTrue();
+	}
 
 	[Fact]
 	public async Task InvestigationWordInTitle_IsStillAnInvestigation()
-		=> (await IsInvestigationAsync("Investigate why run durations drift", ImprovementWithBusinessCase, [])).Should().BeTrue();
+	{
+		string description = ImprovementWithBusinessCase;
+		bool isInvestigation = await FlagAsync("Investigate why run durations drift", description, [], "Improvement");
+		isInvestigation.Should().BeTrue();
+	}
 
 	[Theory]
 	[InlineData("CaseMagic: MQL should support JQL functions, and refuse clearly the ones CaseMagic cannot evaluate")]
@@ -38,15 +50,23 @@ public class InvestigationClassificationTests : TestBase
 	[InlineData("Explore button on the schedule list")]
 	[InlineData("Analysis column on the schedule list")]
 	public async Task AmbiguousWordInAnImprovementTitle_IsNotAnInvestigation(string title)
-		=> (await IsInvestigationAsync(title, ImprovementWithBusinessCase, [])).Should().BeFalse();
+	{
+		string description = ImprovementWithBusinessCase;
+		bool isInvestigation = await FlagAsync(title, description, [], "Improvement");
+		isInvestigation.Should().BeFalse();
+	}
 
 	[Theory]
 	[InlineData("Evaluate options for the schedule list")]
 	[InlineData("Analysis of run duration drift")]
 	public async Task AmbiguousWordInATaskTitle_IsStillAnInvestigation(string title)
-		=> (await IsInvestigationAsync(title, ImprovementWithBusinessCase, [], "Task")).Should().BeTrue();
+	{
+		string description = ImprovementWithBusinessCase;
+		bool isInvestigation = await FlagAsync(title, description, [], "Task");
+		isInvestigation.Should().BeTrue();
+	}
 
-	private static async Task<bool> IsInvestigationAsync(string title, string description, List<string> labels, string issueType = "Improvement")
+	private static async Task<bool> FlagAsync(string title, string description, List<string> labels, string issueType)
 	{
 		NormalizedIssue issue = new()
 		{

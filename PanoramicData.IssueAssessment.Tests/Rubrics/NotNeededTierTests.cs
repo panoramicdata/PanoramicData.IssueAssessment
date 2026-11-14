@@ -17,11 +17,11 @@ public class NotNeededTierTests : TestBase
 
 	[Fact]
 	public async Task NoDocumentationChangeBare_Scores0()
-		=> (await Item("Documentation", "No documentation change.", "Improvement", "MS")).Finding.Should().NotContain("Not needed");
+		=> await NotNeeded("Documentation", "No documentation change.");
 
 	[Fact]
 	public async Task NoDocumentationChangeNA_Scores0()
-		=> (await Item("Documentation", "No documentation change: N/A", "Improvement", "MS")).Finding.Should().NotContain("Not needed");
+		=> await NotNeeded("Documentation", "No documentation change: N/A");
 
 	[Fact]
 	public async Task NoCertificationQuestionWithReason_Scores100()
@@ -33,11 +33,11 @@ public class NotNeededTierTests : TestBase
 
 	[Fact]
 	public async Task NoCertificationQuestionBare_Scores0()
-		=> (await Item("Certifications", "No certification question.", "Improvement", "MS")).Finding.Should().NotContain("Not needed");
+		=> await NotNeeded("Certifications", "No certification question.");
 
 	[Fact]
 	public async Task NoCertificationQuestionNA_Scores0()
-		=> (await Item("Certifications", "No certification question: N/A", "Improvement", "MS")).Finding.Should().NotContain("Not needed");
+		=> await NotNeeded("Certifications", "No certification question: N/A");
 
 	[Fact]
 	public async Task NegatedExamQuestionWithReason_IsNotNeeded_NotCreated()
@@ -60,8 +60,10 @@ public class NotNeededTierTests : TestBase
 
 	[Fact]
 	public async Task ExamQuestionMentionedWithoutNegation_IsStillCreated()
-		=> (await Item("Certifications", "Added certification exam question 42 covering the new column.", "Improvement", "MS"))
-			.Finding.Should().Be("✓ Certifications: Exam question(s) created");
+	{
+		AssessmentReportItem item = await Item("Certifications", "Added certification exam question 42 covering the new column.", "Improvement", "MS");
+		item.Finding.Should().Be("✓ Certifications: Exam question(s) created");
+	}
 
 	[Fact]
 	public async Task AppliesToOpsToo()
@@ -72,7 +74,13 @@ public class NotNeededTierTests : TestBase
 
 	[Fact]
 	public async Task BugCertifications_StillNotApplicable()
-		=> (await Item("Certifications", "No certification question: internal refactor with no user-visible behaviour", "Bug", "MS")).Finding.Should().Be("○ Certifications: Not applicable for bugs");
+	{
+		AssessmentReportItem item = await Item("Certifications", "No certification question: internal refactor with no user-visible behaviour", "Bug", "MS");
+		item.Finding.Should().Be("○ Certifications: Not applicable for bugs");
+	}
+
+	private static async Task NotNeeded(string name, string description)
+		=> (await Item(name, description, "Improvement", "MS")).Finding.Should().NotContain("Not needed");
 
 	private static async Task<AssessmentReportItem> Item(string name, string description, string issueType, string project)
 	{
