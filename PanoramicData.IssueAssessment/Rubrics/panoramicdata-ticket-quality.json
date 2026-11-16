@@ -122,6 +122,12 @@
         { "type": "fieldEquals", "path": "$.platform", "values": [ "Jira" ] },
         { "type": "measure", "atLeast": 2, "of": { "type": "sectionPanelCount", "source": { "paths": [ "$.description" ] }, "count": "panelable" } }
       ]
+    },    "hasMarkdown": {
+      "type": "all",
+      "conditions": [
+        { "type": "fieldEquals", "path": "$.platform", "values": [ "Jira" ] },
+        { "type": "measure", "atLeast": 1, "of": { "type": "markdownSyntax", "source": { "paths": [ "$.description" ] } } }
+      ]
     },
     "isCliRelated": { "type": "textMatches", "source": { "paths": [ "$.title", "$.description" ] }, "patterns": [ "magicsuite\\s+cli", "ms\\s+cli", "command[\\s-]?line", "msmagic", "cli\\s+command", "--\\w+", "invoke[\\s-]command" ] },
     "hasCliLabel": { "type": "fieldMatches", "path": "$.labels", "patterns": [ "CLI|Command" ] },
@@ -391,6 +397,20 @@
           }
         },
         {
+          "name": "Markdown",
+          "description": "The description is Jira wiki markup, not Markdown: Jira renders a Markdown heading as a nested numbered list and shows backticks literally.",
+          "weight": 8,
+          "appliesWhen": { "type": "ref", "name": "hasMarkdown" },
+          "definition": {
+            "type": "tiered",
+            "measures": {
+              "constructs": { "type": "markdownSyntax", "source": { "paths": [ "$.description" ] } }
+            },
+            "tiers": [
+              { "score": 20, "finding": "✗ Markdown: {constructs} Markdown construct(s) that Jira renders wrongly ({constructs:text})", "recommendation": "Rewrite the description as Jira wiki markup: 'h2. ' for headings, double curly braces around inline code, the code macro for code blocks, single asterisks for bold and [text|url] for links" }
+            ]
+          }
+        },        {
           "name": "ReleaseNotes",
           "description": "MS tickets carry customer-facing release notes, written for the person who reads the release notes, not for the team.",
           "weight": 6,
@@ -618,6 +638,20 @@
           }
         },
         {
+          "name": "EpicMarkdown",
+          "description": "The description is Jira wiki markup, not Markdown: Jira renders a Markdown heading as a nested numbered list and shows backticks literally.",
+          "weight": 8,
+          "appliesWhen": { "type": "ref", "name": "hasMarkdown" },
+          "definition": {
+            "type": "tiered",
+            "measures": {
+              "constructs": { "type": "markdownSyntax", "source": { "paths": [ "$.description" ] } }
+            },
+            "tiers": [
+              { "score": 20, "finding": "✗ Markdown: {constructs} Markdown construct(s) that Jira renders wrongly ({constructs:text})", "recommendation": "Rewrite the description as Jira wiki markup: 'h2. ' for headings, double curly braces around inline code, the code macro for code blocks, single asterisks for bold and [text|url] for links" }
+            ]
+          }
+        },        {
           "name": "EpicReleaseNotes",
           "description": "MS tickets carry customer-facing release notes, written for the person who reads the release notes, not for the team.",
           "weight": 6,

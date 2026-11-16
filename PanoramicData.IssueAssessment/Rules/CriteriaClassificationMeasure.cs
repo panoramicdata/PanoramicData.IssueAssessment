@@ -24,7 +24,7 @@ public enum CriteriaClassificationKind
 /// </summary>
 /// <remarks>
 /// A criterion (the item, or the row's first cell) is classified, in order, by: a keyword it starts with, optionally
-/// after <c>*</c> or <c>(</c>; otherwise the one keyword it contains, when it contains exactly one distinct keyword;
+/// after <c>*</c> or <c>(</c>, unless a second keyword is joined to it (<c>MUST/SHOULD</c>, <c>MUST or MAY</c>); otherwise the one keyword it contains, when it contains exactly one distinct keyword;
 /// otherwise, for a list item, the label line above it. A label line is a line that is not a criterion and starts
 /// with a keyword, optionally bolded or bracketed (<c>*MUST*</c>, <c>MUST:</c>). Its scope runs to the next label line
 /// or wiki heading.
@@ -143,7 +143,8 @@ public sealed partial record CriteriaClassificationMeasure : IMeasure
 	[GeneratedRegex(@"^[ \t]*:?-+:?[ \t]*$", RegexOptions.CultureInvariant, 1000)]
 	private static partial Regex MarkdownTableRule();
 
-	[GeneratedRegex(@"^[ \t]*[*(]?[ \t]*(MUST|SHOULD|MAY)\b", RegexOptions.CultureInvariant, 1000)]
+	// A second weight joined to the first ("MUST/SHOULD", "MUST or MAY") leaves the criterion with no single weight.
+	[GeneratedRegex(@"^[ \t]*[*(]?[ \t]*(MUST|SHOULD|MAY)\b(?![ \t]*(?:/|,|\||or\b)[ \t]*(?:MUST|SHOULD|MAY)\b)", RegexOptions.CultureInvariant, 1000)]
 	private static partial Regex Classification();
 
 	[GeneratedRegex(@"\b(?:MUST|SHOULD|MAY)\b", RegexOptions.CultureInvariant, 1000)]

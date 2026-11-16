@@ -26,6 +26,13 @@ the new checks apply.
   the ticket needs an `h2. Verification Evidence` section (optionally marked "(Retrospective)") with a criterion table,
   a Reachability block, a Not covered block and a Suggested QA route of A to D.
 - New condition type `fieldsDiffer` and new measure `criteriaClassification`, for rubrics that need them.
+- `markdownSyntax` measure and `MarkdownSyntax.Constructs`: the Markdown in a description that Jira's wiki markup
+  renders wrongly (an ATX heading, a backtick code span or fence, double-asterisk bold, a Markdown link, a table
+  separator row), skipping `{code}`, `{noformat}` and `{{monospace}}` text. The rules mirror PanoramicData.Skills'
+  `Find-JiraMarkdownSyntax`.
+- `Markdown` (and `EpicMarkdown`) factor in the built-in ticket-quality rubric, weight 8. It applies only to a Jira
+  description that contains Markdown, so it changes no other ticket's score; where it applies it scores 20 and says what
+  was found.
 
 ### Fixed
 
@@ -37,6 +44,8 @@ the new checks apply.
 
 ### Changed
 
+- A criterion that starts with two weights joined together (`MUST/SHOULD`, `MUST or MAY`) is unclassified, as it has
+  no single weight; a second weight later in the sentence still leaves the leading one in force.
 - Documentation and Certifications accept a justified `No documentation change: <reason>` or
   `No certification question: <reason>` line, for all projects.
 

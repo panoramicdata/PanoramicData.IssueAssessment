@@ -191,8 +191,9 @@ The building blocks:
   score (0–100 by default), the finding and an optional recommendation. The last tier has no condition.
 - **Measures** count things: `patternMatchCount`, `occurrenceCount`, `wordCount`, `alphanumericCount`, `length`,
   `itemCount`, `number`, `criteriaHeadingCount`, `sectionPanelCount` (how many `h2.` sections of Jira wiki text
-  are panelable, panelled, unpanelled or carry a panel title that repeats the heading) and `criteriaClassification`
-  (how many criteria in a section there are, how many are not classified MUST, SHOULD or MAY, and how many are MUST).
+  are panelable, panelled, unpanelled or carry a panel title that repeats the heading) `criteriaClassification`
+  (how many criteria in a section there are, how many are not classified MUST, SHOULD or MAY, and how many are MUST) and
+  `markdownSyntax` (how many Markdown constructs a description holds that Jira's wiki markup renders wrongly).
 - **Conditions**: `all`, `any`, `not`, `ref` (a named condition), `measure`, `textMatches`, `fieldMatches`,
   `fieldEquals`, `fieldPresent`, `fieldsDiffer` (two fields differ, ignoring case, surrounding space and an optional
   prefix), `sectionPresent`, `placeholder` (a section that only says "TBD") and, for caps and classifications,

@@ -89,6 +89,22 @@ public class CriteriaClassificationMeasureTests : TestBase
 	public void LowercaseLabelLine_IsNotALabel()
 		=> Counts("must:\r\n# The key rotates").Should().Be((1, 1, 0));
 
+	[Theory]
+	[InlineData("# *MUST/SHOULD:* x")]
+	[InlineData("# MUST or MAY: x")]
+	[InlineData("# (SHOULD, MAY) x")]
+	[InlineData("# MUST | SHOULD x")]
+	public void TwoWeightsJoinedAtTheStart_LeaveTheCriterionUnclassified(string criterion)
+		=> Counts(criterion).Should().Be((1, 1, 0));
+
+	[Fact]
+	public void TwoWeightsJoinedAtTheStart_TakeTheLabelAboveInstead()
+		=> Counts("*SHOULD*\r\n# MUST/MAY: x").Should().Be((1, 0, 0));
+
+	[Fact]
+	public void TwoWeightsFarApart_StillTakeTheLeadingOne()
+		=> Counts("# MUST: the run time stays the same, and SHOULD be logged").Should().Be((1, 0, 1));
+
 	private static (double Items, double Unclassified, double Must) Counts(string criteria)
 	{
 		using JsonDocument document = JsonDocument.Parse(JsonSerializer.Serialize(new { d = Heading + criteria + "\r\n" }));

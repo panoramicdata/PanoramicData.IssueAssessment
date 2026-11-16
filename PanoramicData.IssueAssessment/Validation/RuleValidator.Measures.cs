@@ -15,6 +15,7 @@ internal static partial class RuleValidator
 		LengthMeasure value => SourceError(value.Source),
 		CriteriaHeadingCountMeasure value => SourceError(value.Source),
 		SectionPanelCountMeasure value => SourceError(value.Source),
+		MarkdownSyntaxMeasure value => SourceError(value.Source),
 		ItemCountMeasure value => PathError(value.Path),
 		NumberMeasure value => PathError(value.Path),
 		CriteriaClassificationMeasure value => PathError(value.Path) ?? (string.IsNullOrWhiteSpace(value.Section) ? "has a 'criteriaClassification' measure without a section." : PatternError(value.Section)),
