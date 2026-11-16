@@ -69,7 +69,7 @@ public class BuiltInRubricParityTests : TestBase
 		foreach (JsonNode? category in rubric["categories"]!.AsArray())
 		{
 			JsonArray assessments = category!["assessments"]!.AsArray();
-			foreach (JsonNode? assessment in assessments.Where(item => item!["name"]!.GetValue<string>().EndsWith("Presentation", StringComparison.Ordinal) || item["name"]!.GetValue<string>().EndsWith("ReleaseNotes", StringComparison.Ordinal) || item["name"]!.GetValue<string>() == "TicketContract").ToList())
+			foreach (JsonNode? assessment in assessments.Where(item => item!["name"]!.GetValue<string>().EndsWith("Presentation", StringComparison.Ordinal) || item["name"]!.GetValue<string>().EndsWith("ReleaseNotes", StringComparison.Ordinal) || item["name"]!.GetValue<string>().EndsWith("Markdown", StringComparison.Ordinal) || item["name"]!.GetValue<string>() == "TicketContract").ToList())
 			{
 				assessments.Remove(assessment);
 			}
