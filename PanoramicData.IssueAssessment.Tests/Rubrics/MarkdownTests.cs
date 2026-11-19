@@ -11,8 +11,6 @@ namespace PanoramicData.IssueAssessment.Tests.Rubrics;
 /// </summary>
 public class MarkdownTests : TestBase
 {
-	private static readonly IssueAssessor Assessor = new(BuiltInRubrics.PanoramicDataTicketQuality);
-
 	[Theory]
 	[InlineData("## Objective\r\nWords.", "Markdown heading")]
 	[InlineData("### Objective", "Markdown heading")]
@@ -103,7 +101,7 @@ public class MarkdownTests : TestBase
 	[Fact]
 	public async Task Assess_MarkdownDescription_IsFlaggedWithWhatWasFound()
 	{
-		AssessmentReport report = await AssessAsync("## Summary\r\nUse `Foo.Bar` here.");
+		AssessmentReport report = await AssessDescriptionAsync("## Summary\r\nUse `Foo.Bar` here.");
 
 		report.Findings.Should().Contain("✗ Markdown: 2 Markdown construct(s) that Jira renders wrongly (Markdown heading; backtick code span)");
 		report.Recommendations.Should().Contain(recommendation => recommendation.StartsWith("Rewrite the description as Jira wiki markup", StringComparison.Ordinal));
@@ -112,7 +110,7 @@ public class MarkdownTests : TestBase
 	[Fact]
 	public async Task Assess_WikiMarkupDescription_LeavesMarkdownOut()
 	{
-		AssessmentReport report = await AssessAsync("h2. Summary\r\nUse {{Foo.Bar}} here.");
+		AssessmentReport report = await AssessDescriptionAsync("h2. Summary\r\nUse {{Foo.Bar}} here.");
 
 		report.Findings.Should().NotContain(finding => finding.Contains("Markdown", StringComparison.Ordinal));
 	}
@@ -120,8 +118,8 @@ public class MarkdownTests : TestBase
 	[Fact]
 	public async Task Assess_RemovingTheMarkdown_RaisesTheScore()
 	{
-		AssessmentReport markdown = await AssessAsync("## Summary\r\nUse `Foo.Bar` here, which fails when the export runs with line breaks in the data.");
-		AssessmentReport wiki = await AssessAsync("h2. Summary\r\nUse {{Foo.Bar}} here, which fails when the export runs with line breaks in the data.");
+		AssessmentReport markdown = await AssessDescriptionAsync("## Summary\r\nUse `Foo.Bar` here, which fails when the export runs with line breaks in the data.");
+		AssessmentReport wiki = await AssessDescriptionAsync("h2. Summary\r\nUse {{Foo.Bar}} here, which fails when the export runs with line breaks in the data.");
 
 		wiki.Score!.Value.Should().BeGreaterThan(markdown.Score!.Value);
 	}
@@ -129,7 +127,7 @@ public class MarkdownTests : TestBase
 	[Fact]
 	public async Task Assess_Epic_IsFlaggedToo()
 	{
-		AssessmentReport report = await AssessAsync("## Scope\r\nRun `x`.", issueType: "Epic");
+		AssessmentReport report = await AssessDescriptionAsync("## Scope\r\nRun `x`.", issueType: "Epic");
 
 		report.Findings.Should().Contain(finding => finding.StartsWith("✗ Markdown: ", StringComparison.Ordinal));
 	}
@@ -137,23 +135,8 @@ public class MarkdownTests : TestBase
 	[Fact]
 	public async Task Assess_NotJira_StillReadsTheDescription()
 	{
-		AssessmentReport report = await AssessAsync("## Summary\r\nRun `x`.", platform: "GitHub");
+		AssessmentReport report = await AssessDescriptionAsync("## Summary\r\nRun `x`.", platform: "GitHub");
 
 		report.Findings.Should().NotContain(finding => finding.Contains("Markdown", StringComparison.Ordinal));
-	}
-
-	private static async Task<AssessmentReport> AssessAsync(string description, string platform = "Jira", string issueType = "Task")
-	{
-		using JsonDocument document = new NormalizedIssue
-		{
-			Key = "MS-1",
-			Title = "Example",
-			Description = description,
-			IssueType = issueType,
-			Status = "Open",
-			Platform = platform,
-		}.ToJsonDocument();
-
-		return AssessmentReport.From(await Assessor.AssessAsync(document, CancellationToken));
 	}
 }

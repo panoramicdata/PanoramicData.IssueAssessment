@@ -1,4 +1,6 @@
 using PanoramicData.IssueAssessment.Mapping;
+using PanoramicData.IssueAssessment.Rubrics;
+using System.Runtime.InteropServices;
 
 namespace PanoramicData.IssueAssessment.Tests;
 
@@ -30,5 +32,25 @@ public abstract class TestBase
 		};
 		using JsonDocument document = issue.ToJsonDocument();
 		return AssessmentReport.From(await assessor.AssessAsync(document, CancellationToken));
+	}
+
+	private static readonly IssueAssessor TicketQualityAssessor = new(BuiltInRubrics.PanoramicDataTicketQuality);
+
+	/// <summary>
+	/// Assesses a Jira-style example issue against the built-in ticket quality rubric.
+	/// </summary>
+	protected static async Task<AssessmentReport> AssessDescriptionAsync(string description, [Optional] [DefaultParameterValue("Jira")] string platform, [Optional] [DefaultParameterValue("Task")] string issueType)
+	{
+		using JsonDocument document = new NormalizedIssue
+		{
+			Key = "MS-1",
+			Title = "Example",
+			Description = description,
+			IssueType = issueType,
+			Status = "Open",
+			Platform = platform,
+		}.ToJsonDocument();
+
+		return AssessmentReport.From(await TicketQualityAssessor.AssessAsync(document, CancellationToken));
 	}
 }
