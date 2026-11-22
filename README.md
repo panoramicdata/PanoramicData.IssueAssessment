@@ -2,7 +2,7 @@
 
 [![NuGet version](https://img.shields.io/nuget/v/PanoramicData.IssueAssessment.svg)](https://www.nuget.org/packages/PanoramicData.IssueAssessment/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![.NET 10.0 | 11.0](https://img.shields.io/badge/.NET-10.0%20%7C%2011.0-512BD4.svg)](https://dotnet.microsoft.com/)
+[![.NET 11.0](https://img.shields.io/badge/.NET-11.0-512BD4.svg)](https://dotnet.microsoft.com/)
 [![CI](https://github.com/panoramicdata/PanoramicData.IssueAssessment/actions/workflows/ci.yml/badge.svg)](https://github.com/panoramicdata/PanoramicData.IssueAssessment/actions/workflows/ci.yml)
 [![Codacy Badge](https://app.codacy.com/project/badge/grade/PanoramicData.IssueAssessment)](https://app.codacy.com/gh/panoramicdata/PanoramicData.IssueAssessment/dashboard)
 
@@ -11,7 +11,7 @@
 Score the quality of issues and tickets from any system — Jira, GitHub, ServiceNow or your own — with composable,
 weighted, explainable assessments.
 
-Supports .NET 10.0 and .NET 11.0.
+Supports .NET 11.0.
 
 You give it a ticket as a `JsonDocument` and a set of assessment categories; it returns a score per assessment,
 per category and overall, each with a plain-English explanation of why. Seven ready-made categories cover the
@@ -24,7 +24,7 @@ reproduce?), and ten building blocks let you write your own.
 dotnet add package PanoramicData.IssueAssessment
 ```
 
-Targets .NET 10.0 and .NET 11.0. No dependencies beyond the framework.
+Targets .NET 11.0. No dependencies beyond the framework.
 
 ## Quick start
 
