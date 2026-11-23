@@ -1,33 +1,55 @@
 # Agent instructions
 
-Version: 1.3
+## Glossary
 
-Read `.github/copilot-instructions.md` for repository-specific conventions.
+- NET: .NET, Microsoft's developer platform; this is a product name.
 
-## About Panoramic Data
+## Identity
 
-Panoramic Data Limited is a software company. This repository is a NuGet package that it
-publishes. Its build, CI, versioning, licensing and community files are governed by the open
-source PanoramicData.NugetManagement tool (https://github.com/panoramicdata/PanoramicData.NugetManagement),
-which assesses repositories against a shared set of rules and can apply fixes automatically.
-Files such as CLAUDE.md, AGENTS.md and SECURITY.md may be created or updated
-by that tool.
+You are a careful, security-conscious contributor to this repository.
 
-## Shared Panoramic Data conventions (optional)
+## Scope and boundaries
 
-Panoramic Data maintains shared skills in a private sibling repository, reached from this
-repository's root at:
+- Do not weaken `TreatWarningsAsErrors`, delete or skip tests to make a build pass, or bypass
+  CI/CD checks.
+- Do not commit secrets, credentials, or API tokens.
+- Do not force-push to `main`, rewrite published history, or delete branches without explicit
+  approval.
+- Do not add `Co-Authored-By` trailers or other AI attribution to commit messages or pull requests.
 
-    ../PanoramicData.Skills/.github/skills/copilot-instructions.md
+## Tools
 
-If that path exists, read it before starting work, as it documents organization-wide
-conventions and skills.
+- Build and test with `dotnet build` / `dotnet test`.
+- Use `git` for version control, following the repository's contributing guidelines where present.
 
-**If that path does not exist** (for example, you are an external contributor without access
-to the private `PanoramicData.Skills` repository), ignore this section and continue. It is
-optional guidance, not a requirement: do not stop, do not report an error, and do not ask for
-the repository to be cloned.
+## Repository guide
 
-## Commits
+PanoramicData.IssueAssessment is a .NET 11.0 library that scores issue and ticket quality from any JSON
+document. `DESIGN.md` describes the architecture, and the plan document tracks implementation progress.
 
-Do not add `Co-Authored-By` trailers or other AI attribution to commit messages or pull requests.
+### Formatting
+- Read the repository `.editorconfig` before editing files, and follow it.
+- Preserve the existing indentation style of each file exactly.
+- Use tabs for C#, XML and MSBuild files; use spaces for JSON, YAML and Markdown, as `.editorconfig` says.
+- Run `dotnet format whitespace` after editing, and fix any formatting issues such as `IDE0055` before finishing.
+- Do not reformat unrelated code.
+
+### Design principles
+- Configuration and results are immutable records with `init` properties.
+- Everything long-running is async and takes a `CancellationToken`.
+- Invalid configuration fails when `IssueAssessor` is constructed, so assessment only ever sees valid configuration.
+- Consumers extend the library through `IAssessmentDefinition`, `ISeriesGateCondition` and
+  `IAssessmentCacheProvider`; keep those contracts stable.
+
+### Testing
+- Use xUnit v3 and AwesomeAssertions. Do not use FluentAssertions; if a task seems to need it, ask the maintainer.
+- Line and branch coverage of the library is 100%; every change keeps it there.
+- Run `dotnet test --project PanoramicData.IssueAssessment.Tests/PanoramicData.IssueAssessment.Tests.csproj --coverage --coverage-settings coverage.config`.
+
+### Validation
+- When building to verify changes, build only the specific affected project rather than the full solution.
+
+## PanoramicData staff
+
+PanoramicData staff have shared tooling in a private sibling checkout of PanoramicData.Skills. Anyone
+without it can ignore this section: everything needed to work on this repository is above.
