@@ -58,8 +58,15 @@ public static partial class IssueText
 			openings = openings.Where(opening => IsWikiTextOpening(scan, opening));
 		}
 
+		// A structural heading beats a bold or label line, which only counts when no structural heading matches.
+		List<Match> candidates = [.. openings];
+		if (candidates.Exists(IsStructuralOpening))
+		{
+			candidates = candidates.FindAll(IsStructuralOpening);
+		}
+
 		string? best = null;
-		foreach (Match opening in openings)
+		foreach (Match opening in candidates)
 		{
 			int start = opening.Index + opening.Length;
 			string body = text.Substring(start, SectionAfter(opening.Value, scan[start..]).Length);

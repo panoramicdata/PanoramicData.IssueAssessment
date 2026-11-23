@@ -35,6 +35,12 @@ public static partial class IssueText
 		return criteriaHeading.Groups[2].Success ? criteriaHeading.Groups[2].Value.Length : 7;
 	}
 
+	private static bool IsStructuralOpening(Match opening)
+	{
+		string line = opening.Value.TrimStart(' ', '\t');
+		return line.StartsWith('#') || (line.Length > 1 && (line[0] is 'h' or 'H') && char.IsDigit(line[1]) && line.Length > 2 && line[2] == '.');
+	}
+
 	private static bool IsWikiTextOpening(string text, Match opening)
 	{
 		if (!StartsWithHash.IsMatch(opening.Value))

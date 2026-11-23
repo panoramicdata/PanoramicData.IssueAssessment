@@ -51,6 +51,22 @@ public class IssueTextTests
 	}
 
 	[Fact]
+	public void SectionBody_RealHeadingAndLongerBoldLabelElsewhere_ReadsTheHeading()
+	{
+		const string text = "h2. Steps to Reproduce\r\n# open\r\n# click\r\nh2. Verification Evidence\r\n*Reproduction (MUST 1)*\r\nThe evidence shows a much longer description of what was seen.\r\n";
+
+		IssueText.SectionBody(text, Steps).Should().Be("\r\n# open\r\n# click\r\n");
+	}
+
+	[Fact]
+	public void SectionBody_NoRealHeading_FallsBackToBoldLabel()
+	{
+		const string text = "*Reproduction*\r\n# open\r\nh2. Next\r\nx";
+
+		IssueText.SectionBody(text, Steps).Should().Be("\r\n# open\r\n");
+	}
+
+	[Fact]
 	public void SectionBody_WikiTextHashLines_CannotOpenASection()
 	{
 		// "# Repro" is a list item; "## Repro nested" continues it; and "## Repro heading", whose previous non-blank line
