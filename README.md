@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![.NET 11.0](https://img.shields.io/badge/.NET-11.0-512BD4.svg)](https://dotnet.microsoft.com/)
 [![CI](https://github.com/panoramicdata/PanoramicData.IssueAssessment/actions/workflows/ci.yml/badge.svg)](https://github.com/panoramicdata/PanoramicData.IssueAssessment/actions/workflows/ci.yml)
-[![Codacy Badge](https://app.codacy.com/project/badge/grade/PanoramicData.IssueAssessment)](https://app.codacy.com/gh/panoramicdata/PanoramicData.IssueAssessment/dashboard)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/d89c8174325e4d4aa586c9bd27e759f3)](https://app.codacy.com/gh/panoramicdata/PanoramicData.IssueAssessment/dashboard)
 
 > **Need help with APIs or .NET?** Panoramic Data are experts in APIs and .NET, and we can help with your development. [Contact us](https://www.panoramicdata.com/contact-us) or see our [software services](https://www.panoramicdata.com/services/software).
 
